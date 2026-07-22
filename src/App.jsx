@@ -844,7 +844,7 @@ function PremiumGate({ title, description, features, onUnlock, preview }) {
         </div>
 
         <button className="primary premium-unlock" onClick={onUnlock}>
-          Débloquer Premium — 9,90 €/mois <ChevronRight size={17} />
+          Débloquer Premium — 4,99 €/mois <ChevronRight size={17} />
         </button>
         <small>Paiement simulé dans cette version de démonstration.</small>
       </section>
