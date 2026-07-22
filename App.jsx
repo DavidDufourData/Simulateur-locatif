@@ -150,17 +150,29 @@ export default function App() {
         .ledger-value { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:500; }
         .section-title { font-family:'Newsreader', serif; font-style:italic; font-size:15px; color:${COLORS.brass}; letter-spacing:0.02em; margin: 0 0 14px 0; }
         .stamp { display:inline-block; border:2px solid; border-radius:3px; padding:6px 14px; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; letter-spacing:0.08em; transform: rotate(-2deg); }
-        .lock-overlay { position:relative; }
-        .lock-overlay::after { content:'🔒 Fonction Premium'; position:absolute; inset:0; background:rgba(16,36,62,0.92); color:${COLORS.brassSoft}; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:8px; font-family:'IBM Plex Mono',monospace; }
+        .main-grid { display:grid; grid-template-columns: 1.2fr 1fr; gap:20px; }
+        .sub-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 20px; }
+        .premium-card { background:${COLORS.ink}; border-radius:10px; padding:20px; color:${COLORS.paper}; }
+        .premium-lock-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+        .premium-badge { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; background:rgba(255,255,255,0.08); color:${COLORS.brassSoft}; padding:4px 10px; border-radius:20px; }
+        @media (max-width: 720px) {
+          .main-grid { grid-template-columns: 1fr; }
+          .hero-pad { padding: 36px 16px 48px !important; }
+          .body-pad { padding: 0 16px !important; margin-top: -24px !important; }
+          .card-pad { padding: 22px 18px 6px !important; }
+        }
+        @media (max-width: 420px) {
+          .sub-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       {/* HERO */}
-      <header style={{ background: COLORS.ink, color: COLORS.paper, padding: "48px 24px 64px" }}>
+      <header className="hero-pad" style={{ background: COLORS.ink, color: COLORS.paper, padding: "48px 24px 64px" }}>
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, letterSpacing: "0.12em", color: COLORS.brassSoft, marginBottom: 10 }}>
             SIMULATEUR — RENTABILITÉ LOCATIVE
           </div>
-          <h1 style={{ fontFamily: "'Newsreader', serif", fontWeight: 500, fontSize: "clamp(32px,5vw,52px)", margin: "0 0 8px 0", lineHeight: 1.1 }}>
+          <h1 style={{ fontFamily: "'Newsreader', serif", fontWeight: 500, fontSize: "clamp(28px,7vw,52px)", margin: "0 0 8px 0", lineHeight: 1.1 }}>
             Votre cash-flow, au centime près.
           </h1>
           <p style={{ maxWidth: 560, color: "#B9C4D2", fontSize: 15, lineHeight: 1.5 }}>
@@ -168,13 +180,13 @@ export default function App() {
           </p>
           <div style={{ marginTop: 28, display: "flex", gap: 28, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "clamp(28px,4vw,40px)", color: statutColor === COLORS.green ? "#7FD9AE" : "#E8998A" }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "clamp(26px,8vw,40px)", color: statutColor === COLORS.green ? "#7FD9AE" : "#E8998A" }}>
                 {euros(calc.cashflowMensuel)}
               </div>
               <div style={{ fontSize: 12, color: "#8EA0B3", letterSpacing: "0.04em" }}>CASH-FLOW MENSUEL</div>
             </div>
             <div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "clamp(28px,4vw,40px)" }}>{pct(calc.rentabiliteNette)}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "clamp(26px,8vw,40px)" }}>{pct(calc.rentabiliteNette)}</div>
               <div style={{ fontSize: 12, color: "#8EA0B3", letterSpacing: "0.04em" }}>RENDEMENT NET</div>
             </div>
             <div style={{ alignSelf: "center" }}>
@@ -187,9 +199,9 @@ export default function App() {
       </header>
 
       {/* BODY */}
-      <main style={{ maxWidth: 980, margin: "-32px auto 60px", padding: "0 24px", display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+      <main className="main-grid body-pad" style={{ maxWidth: 980, margin: "-32px auto 60px", padding: "0 24px" }}>
         {/* Inputs */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: "28px 28px 8px", boxShadow: "0 12px 32px rgba(16,36,62,0.10)" }}>
+        <div className="card-pad" style={{ background: "#fff", borderRadius: 10, padding: "28px 28px 8px", boxShadow: "0 12px 32px rgba(16,36,62,0.10)" }}>
           <p className="section-title">Acquisition</p>
           <Field label="Prix d'achat" value={prixAchat} onChange={setPrixAchat} suffix="€" step={1000} />
           <Field label="Frais de notaire" value={fraisNotaire} onChange={setFraisNotaire} suffix="%" step={0.1} />
@@ -197,7 +209,7 @@ export default function App() {
           <Field label="Apport personnel" value={apport} onChange={setApport} suffix="€" step={1000} />
 
           <p className="section-title" style={{ marginTop: 24 }}>Crédit</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+          <div className="sub-grid">
             <Field label="Taux d'intérêt" value={tauxCredit} onChange={setTauxCredit} suffix="%" step={0.05} />
             <Field label="Durée" value={dureeCredit} onChange={setDureeCredit} suffix="ans" step={1} />
           </div>
@@ -205,11 +217,11 @@ export default function App() {
 
           <p className="section-title" style={{ marginTop: 24 }}>Exploitation</p>
           <Field label="Loyer mensuel (hors charges)" value={loyerMensuel} onChange={setLoyerMensuel} suffix="€" step={10} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+          <div className="sub-grid">
             <Field label="Charges copropriété" value={chargesCopro} onChange={setChargesCopro} suffix="€/mois" step={5} />
             <Field label="Taxe foncière" value={taxeFonciere} onChange={setTaxeFonciere} suffix="€/an" step={50} />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+          <div className="sub-grid">
             <Field label="Vacance locative" value={vacanceLocative} onChange={setVacanceLocative} suffix="%" step={1} />
             <Field label="Frais de gestion" value={gestionLocative} onChange={setGestionLocative} suffix="%" step={1} />
           </div>
@@ -230,14 +242,23 @@ export default function App() {
           </div>
 
           {/* Premium teaser — this is where a subscription paywall would live */}
-          <div className={premium ? "" : "lock-overlay"} style={{ background: COLORS.ink, borderRadius: 10, padding: 24, color: COLORS.paper, minHeight: 140 }}>
-            <p className="section-title">Module fiscal (Premium)</p>
-            <p style={{ fontSize: 13, color: "#B9C4D2", lineHeight: 1.6 }}>
-              Comparatif LMNP réel vs micro-BIC, impact IFI, et amortissement du bien sur 20 ans.
-            </p>
+          <div className="premium-card">
+            <div className="premium-lock-row">
+              <span className="premium-badge">{premium ? "✓ DÉBLOQUÉ" : "🔒 PREMIUM"}</span>
+            </div>
+            <p className="section-title" style={{ margin: "0 0 8px 0" }}>Module fiscal</p>
+            {premium ? (
+              <p style={{ fontSize: 13, color: "#D9E0E8", lineHeight: 1.6, margin: "0 0 14px 0" }}>
+                Comparatif LMNP réel vs micro-BIC : économie d'impôt estimée, amortissement du bien sur 20 ans, et impact sur l'IFI. (Contenu de démonstration.)
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: "#8EA0B3", lineHeight: 1.6, margin: "0 0 14px 0" }}>
+                Comparatif LMNP réel vs micro-BIC, impact IFI, et amortissement du bien sur 20 ans.
+              </p>
+            )}
             <button
               onClick={() => setPremium(!premium)}
-              style={{ marginTop: 10, background: COLORS.brass, color: COLORS.ink, border: "none", borderRadius: 6, padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              style={{ background: COLORS.brass, color: COLORS.ink, border: "none", borderRadius: 6, padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
             >
               {premium ? "Verrouiller (démo)" : "Débloquer (démo)"}
             </button>
