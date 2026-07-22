@@ -17,7 +17,7 @@ const COLORS = {
 
 // Remplacez cette valeur par votre vrai lien Stripe (Payment Link) une fois créé.
 // Voir /api/verify-session.js pour la vérification serveur du paiement.
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_00w5kD3QvcjZcx82vxgQE01";
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/REMPLACER_PAR_VOTRE_LIEN";
 
 function euros(n) {
   if (!isFinite(n)) return "—";
@@ -71,6 +71,8 @@ export default function App() {
   const [gestionLocative, setGestionLocative] = useState("0");
   const [vacanceLocative, setVacanceLocative] = useState("5");
   const [tmi, setTmi] = useState("30");
+  const [tauxAppreciation, setTauxAppreciation] = useState("1.5");
+  const [anneeRevente, setAnneeRevente] = useState("10");
   const [premium, setPremium] = useState(false);
 
   // Check on load whether this browser already unlocked premium
@@ -162,6 +164,89 @@ export default function App() {
     const impotReel = baseReel * tauxImposition;
     const economieAnnuelle = impotMicroBic - impotReel;
 
+    // --- Tableau d'amortissement du prêt (solde restant dû en fin d'année) ---
+    const tauxAppreciationN = Number(tauxAppreciation) || 0;
+    const anneeReventeN = Math.max(Number(anneeRevente) || 0, 1);
+
+    const amortSchedule = [];
+    let solde = montantEmprunte;
+    let interetsCumulesAnnee = 0;
+    let capitalCumuleAnnee = 0;
+    for (let m = 1; m <= nMois; m++) {
+      const interet = solde * tauxMensuel;
+      const capitalRembourse = mensualiteCredit - interet;
+      solde = Math.max(solde - capitalRembourse, 0);
+      interetsCumulesAnnee += interet;
+      capitalCumuleAnnee += capitalRembourse;
+      if (m % 12 === 0) {
+        amortSchedule.push({
+          annee: m / 12,
+          interets: interetsCumulesAnnee,
+          capital: capitalCumuleAnnee,
+          soldeRestant: solde,
+        });
+        interetsCumulesAnnee = 0;
+        capitalCumuleAnnee = 0;
+      }
+    }
+    const soldeAlAnnee = (annee) => {
+      if (annee <= 0) return montantEmprunte;
+      if (annee >= amortSchedule.length) return 0;
+      return amortSchedule[Math.floor(annee) - 1]?.soldeRestant ?? 0;
+    };
+
+    // --- Projection patrimoniale sur 20 ans (points tous les 5 ans) ---
+    const projection = [0, 5, 10, 15, 20].map((annee) => {
+      const valeurBien = coutTotal * Math.pow(1 + tauxAppreciationN / 100, annee);
+      const capitalRestantDu = soldeAlAnnee(annee);
+      const cashflowCumule = cashflowAnnuel * annee;
+      const patrimoineNet = valeurBien - capitalRestantDu + cashflowCumule - apportN;
+      return { annee, valeurBien, capitalRestantDu, cashflowCumule, patrimoineNet };
+    });
+
+    // --- Simulateur de revente (plus-value) ---
+    const prixVenteEstime = coutTotal * Math.pow(1 + tauxAppreciationN / 100, anneeReventeN);
+    const plusValueBrute = Math.max(0, prixVenteEstime - coutTotal);
+    // Abattements pour durée de détention (résidence non principale, régime simplifié)
+    const abattementIR = (() => {
+      if (anneeReventeN <= 5) return 0;
+      if (anneeReventeN <= 21) return (anneeReventeN - 5) * 6;
+      return 100;
+    })();
+    const abattementPS = (() => {
+      if (anneeReventeN <= 5) return 0;
+      if (anneeReventeN <= 21) return (anneeReventeN - 5) * 1.65;
+      if (anneeReventeN <= 22) return 16 * 1.65 + 1.6;
+      if (anneeReventeN < 30) return 16 * 1.65 + 1.6 + (anneeReventeN - 22) * 9;
+      return 100;
+    })();
+    const plusValueImposableIR = plusValueBrute * (1 - Math.min(abattementIR, 100) / 100);
+    const plusValueImposablePS = plusValueBrute * (1 - Math.min(abattementPS, 100) / 100);
+    const impotPlusValue = plusValueImposableIR * 0.19 + plusValueImposablePS * 0.172;
+    const capitalRestantALaRevente = soldeAlAnnee(anneeReventeN);
+    const produitNetRevente = prixVenteEstime - impotPlusValue - capitalRestantALaRevente;
+
+    // --- Scénarios optimiste / pessimiste (cash-flow mensuel) ---
+    const cashflowScenario = (loyerAjuste, vacanceAjustee) => {
+      const loyerAnnuelAj = loyerAjuste * 12;
+      const fraisGestionAnAj = loyerAnnuelAj * (gestionLocativeN / 100);
+      return (
+        loyerAjuste * (1 - vacanceAjustee / 100) -
+        chargesCoproN -
+        fraisGestionAnAj / 12 -
+        taxeFonciereN / 12 -
+        mensualiteTotale
+      );
+    };
+    const cashflowPessimiste = cashflowScenario(
+      loyerMensuelN * 0.95,
+      Math.min(vacanceLocativeN + 8, 100)
+    );
+    const cashflowOptimiste = cashflowScenario(
+      loyerMensuelN * 1.05,
+      Math.max(vacanceLocativeN - 3, 0)
+    );
+
     return {
       coutTotal,
       montantEmprunte,
@@ -176,12 +261,24 @@ export default function App() {
       impotReel,
       economieAnnuelle,
       amortissementAnnuel,
+      amortSchedule,
+      projection,
+      anneeReventeN,
+      prixVenteEstime,
+      plusValueBrute,
+      abattementIR: Math.min(abattementIR, 100),
+      abattementPS: Math.min(abattementPS, 100),
+      impotPlusValue,
+      capitalRestantALaRevente,
+      produitNetRevente,
+      cashflowPessimiste,
+      cashflowOptimiste,
     };
   }, [
     prixAchat, fraisNotaire, travaux, apport,
     tauxCredit, dureeCredit, assuranceCredit,
     loyerMensuel, chargesCopro, taxeFonciere, gestionLocative, vacanceLocative,
-    tmi,
+    tmi, tauxAppreciation, anneeRevente,
   ]);
 
   const statut = calc.cashflowMensuel >= 0 ? "AUTOFINANCÉ" : "EFFORT D'ÉPARGNE";
@@ -210,6 +307,18 @@ export default function App() {
         .premium-card { background:${COLORS.ink}; border-radius:10px; padding:20px; color:${COLORS.paper}; }
         .premium-lock-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
         .premium-badge { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; background:rgba(255,255,255,0.08); color:${COLORS.brassSoft}; padding:4px 10px; border-radius:20px; }
+        .mini-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+        .mini-table th { text-align:right; font-weight:500; color:#8EA0B3; padding:4px 6px; font-size:11px; }
+        .mini-table th:first-child, .mini-table td:first-child { text-align:left; }
+        .mini-table td { text-align:right; padding:4px 6px; font-family:'IBM Plex Mono', monospace; color:${COLORS.paper}; border-top:1px dashed rgba(255,255,255,0.12); }
+        .scenario-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,0.15); }
+        @media print {
+          .no-print { display:none !important; }
+          body { background:#fff !important; }
+          .premium-card { break-inside: avoid; background:#fff !important; color:#10243E !important; border:1px solid #ccc; }
+          .premium-card .ledger-label, .premium-card td, .premium-card th { color:#10243E !important; }
+          .main-grid { grid-template-columns: 1fr !important; }
+        }
         @media (max-width: 720px) {
           .main-grid { grid-template-columns: 1fr; }
           .hero-pad { padding: 36px 16px 48px !important; }
@@ -298,6 +407,10 @@ export default function App() {
               </select>
             </div>
           </label>
+          <div className="sub-grid">
+            <Field label="Appréciation du bien" value={tauxAppreciation} onChange={setTauxAppreciation} suffix="%/an" step={0.1} />
+            <Field label="Année de revente simulée" value={anneeRevente} onChange={setAnneeRevente} suffix="ans" step={1} />
+          </div>
         </div>
 
         {/* Ledger results */}
@@ -344,6 +457,96 @@ export default function App() {
                 <p style={{ fontSize: 11, color: "#8EA0B3", lineHeight: 1.5, marginTop: 14 }}>
                   Estimation indicative (amortissement linéaire simplifié, hors IFI). Ne remplace pas l'avis d'un comptable.
                 </p>
+
+                {/* Projection patrimoniale */}
+                <p className="section-title" style={{ marginTop: 22 }}>Projection patrimoniale</p>
+                <table className="mini-table">
+                  <thead>
+                    <tr><th>Année</th><th>Valeur du bien</th><th>Capital restant dû</th><th>Patrimoine net</th></tr>
+                  </thead>
+                  <tbody>
+                    {calc.projection.map((p) => (
+                      <tr key={p.annee}>
+                        <td>{p.annee === 0 ? "Achat" : `An ${p.annee}`}</td>
+                        <td>{euros(p.valeurBien)}</td>
+                        <td>{euros(p.capitalRestantDu)}</td>
+                        <td style={{ color: COLORS.brassSoft }}>{euros(p.patrimoineNet)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p style={{ fontSize: 11, color: "#8EA0B3", lineHeight: 1.5, marginTop: 8 }}>
+                  Patrimoine net = valeur estimée du bien − capital restant dû + cash-flow cumulé − apport initial. Cash-flow supposé constant (hors évolution des loyers).
+                </p>
+
+                {/* Simulateur de revente */}
+                <p className="section-title" style={{ marginTop: 22 }}>Simulation de revente — année {calc.anneeReventeN}</p>
+                <div className="ledger-row" style={{ borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Prix de vente estimé</span>
+                  <span className="ledger-value" style={{ color: COLORS.paper }}>{euros(calc.prixVenteEstime)}</span>
+                </div>
+                <div className="ledger-row" style={{ borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Plus-value brute</span>
+                  <span className="ledger-value" style={{ color: COLORS.paper }}>{euros(calc.plusValueBrute)}</span>
+                </div>
+                <div className="ledger-row" style={{ borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Abattements détention (IR / PS)</span>
+                  <span className="ledger-value" style={{ color: COLORS.paper }}>{pct(calc.abattementIR)} / {pct(calc.abattementPS)}</span>
+                </div>
+                <div className="ledger-row" style={{ borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Impôt sur la plus-value</span>
+                  <span className="ledger-value" style={{ color: COLORS.paper }}>{euros(calc.impotPlusValue)}</span>
+                </div>
+                <div className="ledger-row" style={{ borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Capital restant dû à la revente</span>
+                  <span className="ledger-value" style={{ color: COLORS.paper }}>{euros(calc.capitalRestantALaRevente)}</span>
+                </div>
+                <div className="ledger-row" style={{ borderBottom: "none" }}>
+                  <span className="ledger-label" style={{ color: "#B9C4D2" }}>Produit net de la revente</span>
+                  <span className="ledger-value" style={{ color: "#7FD9AE" }}>{euros(calc.produitNetRevente)}</span>
+                </div>
+                <p style={{ fontSize: 11, color: "#8EA0B3", lineHeight: 1.5, marginTop: 8 }}>
+                  Abattements pour durée de détention (régime simplifié, hors résidence principale). Frais d'agence à la revente non déduits.
+                </p>
+
+                {/* Tableau d'amortissement du prêt */}
+                <p className="section-title" style={{ marginTop: 22 }}>Amortissement du prêt</p>
+                <table className="mini-table">
+                  <thead>
+                    <tr><th>Année</th><th>Intérêts</th><th>Capital</th><th>Solde restant dû</th></tr>
+                  </thead>
+                  <tbody>
+                    {calc.amortSchedule
+                      .filter((r) => r.annee % 5 === 0 || r.annee === 1 || r.annee === calc.amortSchedule.length)
+                      .map((r) => (
+                        <tr key={r.annee}>
+                          <td>An {r.annee}</td>
+                          <td>{euros(r.interets)}</td>
+                          <td>{euros(r.capital)}</td>
+                          <td>{euros(r.soldeRestant)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+
+                {/* Scénarios optimiste / pessimiste */}
+                <p className="section-title" style={{ marginTop: 22 }}>Scénarios</p>
+                <div className="scenario-row">
+                  <span className="ledger-label" style={{ color: "#E8998A" }}>Pessimiste (loyer −5 %, vacance +8 pts)</span>
+                  <span className="ledger-value" style={{ color: "#E8998A" }}>{euros(calc.cashflowPessimiste)}</span>
+                </div>
+                <div className="scenario-row" style={{ borderBottom: "none" }}>
+                  <span className="ledger-label" style={{ color: "#7FD9AE" }}>Optimiste (loyer +5 %, vacance −3 pts)</span>
+                  <span className="ledger-value" style={{ color: "#7FD9AE" }}>{euros(calc.cashflowOptimiste)}</span>
+                </div>
+
+                <button
+                  onClick={() => window.print()}
+                  className="no-print"
+                  style={{ marginTop: 18, background: "transparent", color: COLORS.brassSoft, border: `1px solid ${COLORS.brassSoft}`, borderRadius: 6, padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Exporter le rapport en PDF
+                </button>
               </>
             ) : (
               <>
