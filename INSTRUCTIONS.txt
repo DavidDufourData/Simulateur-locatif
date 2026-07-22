@@ -1,0 +1,22 @@
+CORRECTIF — ANALYSE D'ANNONCE PREMIUM
+
+Remplacez uniquement :
+- src/App.jsx
+- src/styles.css
+
+Ajouts :
+- rubrique « Analyse annonce » dans le menu ;
+- accès verrouillé pour les utilisateurs gratuits ;
+- aperçu Premium avec bouton d'abonnement ;
+- zone pour coller le texte d'une annonce ;
+- exemple prérempli ;
+- extraction indicative du prix, de la surface, des charges, du DPE et du loyer ;
+- rendement brut/net, cash-flow, estimation des travaux ;
+- score sur 100 et verdict ACHETER / NÉGOCIER / ÉVITER ;
+- prix de négociation conseillé ;
+- points forts et points de vigilance ;
+- export PDF via l'impression du navigateur.
+
+Important :
+Cette version fournit une analyse locale simulée pour tester l'expérience.
+Elle ne consulte pas réellement les URL d'annonces et n'appelle pas encore un modèle d'IA externe.
