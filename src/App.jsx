@@ -798,7 +798,8 @@ Loyer estimé : 1 050 € par mois.`;
       <section className="card announcement-input-card">
         <div className="input-tabs">
           <button className="active"><FileText size={15} /> Texte de l’annonce</button>
-          <button title="Collez le contenu de la page, les liens seuls ne peuvent pas encore être lus automatiquement."><Link2 size={15} /> Lien + texte</button>
+          <button title="Copiez le contenu d’une annonce immobilière puis collez-le ci-dessous.
+  La lecture automatique d’un lien sera ajoutée dans une prochaine version."><Link2 size={15} /> Lien + texte</button>
         </div>
         <textarea
           value={input}
