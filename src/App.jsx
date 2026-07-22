@@ -18,7 +18,7 @@ const FREE_PROJECT_LIMIT = 3;
 const defaultProject = {
   id: "",
   name: "Appartement centre-ville",
-  city: "Chilly-Mazarin",
+  city: "",
   price: "230000",
   notary: "8",
   works: "10000",
@@ -855,9 +855,9 @@ function PremiumGate({ title, description, features, onUnlock, preview }) {
 function PremiumCheckout({ open, onClose, onSuccess }) {
   const [step, setStep] = useState("form");
   const [email, setEmail] = useState("");
-  const [card, setCard] = useState("4242 4242 4242 4242");
-  const [expiry, setExpiry] = useState("12/30");
-  const [cvc, setCvc] = useState("123");
+  const [card, setCard] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -910,7 +910,7 @@ function PremiumCheckout({ open, onClose, onSuccess }) {
 
             <div className="checkout-order">
               <div><Crown size={19} /><span><b>Premium mensuel</b><small>Résiliable à tout moment</small></span></div>
-              <strong>9,90 €<small>/mois</small></strong>
+              <strong>4,99 €<small>/mois</small></strong>
             </div>
 
             <form onSubmit={pay}>
