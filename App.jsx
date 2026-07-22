@@ -12,7 +12,7 @@ const COLORS = {
   line: "#D8D0BC",
 };
 
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/REMPLACER_PAR_VOTRE_LIEN";
+const STRIPE_PAYMENT_LINK = "const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_00w5kD3QvcjZcx82vxgQE01";
 
 const number = (value) => Number(value) || 0;
 
