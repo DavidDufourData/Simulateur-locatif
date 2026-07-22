@@ -1,0 +1,18 @@
+RENTA LOCATIVE V7 — CORRECTIF UNIQUEMENT
+
+Remplacez uniquement :
+- src/App.jsx
+- src/styles.css
+
+Fonctionnement V7 :
+- offre gratuite limitée à 3 projets enregistrés ;
+- simulateur, tableau de bord et portefeuille accessibles gratuitement ;
+- comparateur verrouillé sans Premium ;
+- objectifs patrimoniaux verrouillés sans Premium ;
+- export PDF verrouillé sans Premium ;
+- paiement test Premium intégré ;
+- après activation, toutes les fonctions sont débloquées ;
+- le statut Premium reste mémorisé dans le navigateur ;
+- « Réinitialiser le test » permet de repasser en mode gratuit.
+
+Aucun autre fichier ne doit être remplacé.
