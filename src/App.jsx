@@ -844,7 +844,7 @@ function PremiumGate({ title, description, features, onUnlock, preview }) {
         </div>
 
         <button className="primary premium-unlock" onClick={onUnlock}>
-          Débloquer Premium — 9,90 €/mois <ChevronRight size={17} />
+          Débloquer Premium — 4,99 €/mois <ChevronRight size={17} />
         </button>
         <small>Paiement simulé dans cette version de démonstration.</small>
       </section>
@@ -910,7 +910,7 @@ function PremiumCheckout({ open, onClose, onSuccess }) {
 
             <div className="checkout-order">
               <div><Crown size={19} /><span><b>Premium mensuel</b><small>Résiliable à tout moment</small></span></div>
-              <strong>9,90 €<small>/mois</small></strong>
+              <strong>4,99 €<small>/mois</small></strong>
             </div>
 
             <form onSubmit={pay}>
@@ -937,7 +937,7 @@ function PremiumCheckout({ open, onClose, onSuccess }) {
                 <label><span>CVC</span><input inputMode="numeric" value={cvc} onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))} /></label>
               </div>
               {error && <p className="checkout-error">{error}</p>}
-              <button className="checkout-pay" type="submit">Payer 9,90 €</button>
+              <button className="checkout-pay" type="submit">Payer 4,99 €</button>
               <p className="checkout-secure">🔒 Paiement simulé pour tester l’expérience complète.</p>
             </form>
           </>
