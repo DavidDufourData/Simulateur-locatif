@@ -291,3 +291,70 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
 @media print{
   .checkout-overlay,.premium-toast,.premium-status{display:none!important}
 }
+
+
+/* V7 — vrai verrouillage Gratuit / Premium */
+.nav-premium-icon{margin-left:auto!important;color:#e0b64b!important;flex:none}
+.free-status{
+  border:1px solid var(--line);background:var(--card-soft);color:var(--muted);
+  padding:9px 11px;border-radius:9px;font-size:10px;font-weight:700
+}
+.quick-premium{position:relative}
+.quick-premium::after{
+  content:"PREMIUM";position:absolute;right:11px;top:10px;padding:3px 6px;border-radius:99px;
+  background:#fff3d5;color:#87610e;font-size:7px;font-weight:900;letter-spacing:.08em
+}
+.quick-premium b{display:flex!important;align-items:center;gap:5px}
+.quick-premium b svg{width:13px!important;color:#d4a72f!important}
+.premium-gate-page{display:grid;place-items:center;min-height:calc(100vh - 120px)}
+.premium-gate{
+  width:min(100%,720px);text-align:center;background:var(--card);border:1px solid var(--line);
+  border-radius:22px;padding:42px;box-shadow:0 25px 70px rgba(24,42,75,.10)
+}
+.premium-gate-icon{
+  width:64px;height:64px;border-radius:18px;margin:0 auto 15px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#fff2c4,#ffe18b);color:#8a6410
+}
+.premium-gate-tag{
+  display:inline-flex;padding:5px 9px;border-radius:99px;background:#fff3d5;color:#8a6410;
+  font-size:9px;font-weight:900;letter-spacing:.09em
+}
+.premium-gate h1{font:800 31px Manrope;letter-spacing:-.04em;margin:14px auto 9px;max-width:600px}
+.premium-gate>p{max-width:570px;margin:0 auto;color:var(--muted);line-height:1.65;font-size:12px}
+.premium-preview{
+  margin:25px auto 20px;border:1px solid var(--line);border-radius:15px;padding:18px;
+  background:var(--card-soft);position:relative;overflow:hidden
+}
+.premium-preview::after{
+  content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:translateX(-100%);animation:previewShine 2.4s infinite
+}
+@keyframes previewShine{to{transform:translateX(100%)}}
+.blurred-comparison{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;filter:blur(.8px);opacity:.78}
+.blurred-comparison>div:not(.preview-versus){display:grid;gap:5px;padding:12px;border-radius:11px;background:var(--card)}
+.blurred-comparison b{font-size:10px;color:var(--muted)}
+.blurred-comparison strong{font:800 25px Manrope}
+.blurred-comparison span{font-size:10px;color:var(--green)}
+.preview-versus{font-size:10px;font-weight:900;color:var(--muted)}
+.goal-preview{max-width:420px;margin:auto;text-align:left;filter:blur(.5px);opacity:.82}
+.goal-preview span,.goal-preview small{display:block;color:var(--muted);font-size:10px}
+.goal-preview b{display:block;font:800 27px Manrope;margin:5px 0 12px}
+.goal-preview>div{height:9px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:7px}
+.goal-preview i{display:block;height:100%;background:linear-gradient(90deg,#316ff5,#7aa4ff);border-radius:99px}
+.premium-feature-list{
+  display:grid;grid-template-columns:1fr 1fr;text-align:left;gap:9px 16px;
+  max-width:590px;margin:20px auto
+}
+.premium-feature-list>div{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:11px}
+.premium-feature-list svg{color:var(--green);flex:none}
+.premium-unlock{margin:7px auto 9px}
+.premium-gate>small{display:block;color:var(--muted);font-size:9px}
+.limit-toast>div{background:#fff3d5;color:#9b7215}
+@media(max-width:780px){
+  .free-status{display:none}
+  .premium-gate{padding:28px 18px}
+  .premium-gate h1{font-size:25px}
+  .premium-feature-list{grid-template-columns:1fr}
+  .blurred-comparison{grid-template-columns:1fr}
+  .preview-versus{display:none}
+}
