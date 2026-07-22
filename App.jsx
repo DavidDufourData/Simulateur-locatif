@@ -17,7 +17,7 @@ const COLORS = {
 
 // Remplacez cette valeur par votre vrai lien Stripe (Payment Link) une fois créé.
 // Voir /api/verify-session.js pour la vérification serveur du paiement.
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/REMPLACER_PAR_VOTRE_LIEN";
+const STRIPE_PAYMENT_LINK = https://buy.stripe.com/test_00w5kD3QvcjZcx82vxgQE01;
 
 function euros(n) {
   if (!isFinite(n)) return "—";
