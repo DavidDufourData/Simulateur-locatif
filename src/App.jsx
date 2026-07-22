@@ -938,7 +938,7 @@ function PremiumCheckout({ open, onClose, onSuccess }) {
                 <label><span>CVC</span><input inputMode="numeric" value={cvc} onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))} /></label>
               </div>
               {error && <p className="checkout-error">{error}</p>}
-              <button className="checkout-pay" type="submit">Payer 9,90 €</button>
+              <button className="checkout-pay" type="submit">Payer 4,99 €</button>
               <p className="checkout-secure">🔒 Paiement simulé pour tester l’expérience complète.</p>
             </form>
           </>
