@@ -1114,7 +1114,7 @@ export default function App() {
         <header className="topbar">
           <div>
             <span>RENTA LOCATIVE V7</span>
-            <h2>{page === "dashboard" ? "Bonjour David 👋" : nav.find((item) => item[0] === page)?.[1]}</h2>
+            <h2>{page === "dashboard" ? "Bienvenue sur Renta Locative 👋" : nav.find((item) => item[0] === page)?.[1]}</h2>
           </div>
           <div className="top-actions">
             <button className="icon-button" onClick={() => setDark(!dark)}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
