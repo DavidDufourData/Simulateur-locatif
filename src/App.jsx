@@ -1139,6 +1139,7 @@ function InvestorRadar({ projects }) {
   const [data, setData] = useState(RADAR_FALLBACK);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const loadRadar = async () => {
     setLoading(true);
@@ -1153,7 +1154,7 @@ function InvestorRadar({ projects }) {
       setData(payload);
     } catch {
       setData(RADAR_FALLBACK);
-      setNotice("Mode démonstration : l’API autonome n’est pas encore déployée.");
+      setNotice("Mode démonstration : les sources n’ont pas pu être chargées.");
     } finally {
       setLoading(false);
     }
@@ -1165,45 +1166,56 @@ function InvestorRadar({ projects }) {
     ? new Date(data.updatedAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })
     : "Sources non connectées";
 
-  const projectCount = projects.length;
   const activeProject = projects[0];
   const activeCalc = activeProject ? calculate(activeProject) : null;
+  const featured = data.news[0];
+  const secondaryNews = data.news.slice(1, 3);
+  const remainingNews = data.news.slice(3);
+  const visibleRemaining = showAll ? remainingNews : remainingNews.slice(0, 3);
+
+  const toneFor = (category = "") => {
+    const value = category.toLocaleLowerCase("fr-FR");
+    if (value.includes("fiscal")) return "orange";
+    if (value.includes("crédit") || value.includes("credit")) return "green";
+    if (value.includes("location")) return "purple";
+    if (value.includes("travaux") || value.includes("dpe")) return "red";
+    return "blue";
+  };
 
   return (
-    <div className="page-section radar-page">
-      <section className="radar-hero">
+    <div className="page-section radar-page radar-v13">
+      <section className="radar-hero radar-hero-compact">
         <div>
-          <span className="eyebrow"><Activity size={14} /> RADAR INVESTISSEUR PREMIUM</span>
-          <h1>Comprenez le marché. Décidez avec des faits.</h1>
-          <p>Actualités, fiscalité, tendances et tutoriels traduits en conséquences concrètes pour vos investissements.</p>
+          <span className="eyebrow"><Activity size={14} /> RADAR INVESTISSEUR</span>
+          <h1>Le marché, sans le bruit.</h1>
+          <p>Les informations utiles, leur impact et l’action à retenir.</p>
           <div className="radar-meta">
-            <span><Clock3 size={15} /> Mise à jour : {updatedLabel}</span>
-            <span><ShieldCheck size={15} /> Sources datées et traçables</span>
+            <span><Clock3 size={15} /> {updatedLabel}</span>
+            <span><ShieldCheck size={15} /> Sources officielles</span>
           </div>
         </div>
-        <div className="radar-mood">
+        <div className="radar-mood radar-mood-compact">
           <span>Lecture du marché</span>
           <strong>{data.marketMood?.label || "Analyse en cours"}</strong>
           <p>{data.marketMood?.summary}</p>
-          {data.marketMood?.confidence != null && <small>Indice de confiance : {data.marketMood.confidence}%</small>}
         </div>
       </section>
 
       {notice && <div className="radar-notice"><AlertTriangle size={17} /> {notice}</div>}
 
-      <div className="radar-toolbar">
+      <div className="radar-toolbar radar-toolbar-v13">
         <div>
-          <b>Votre briefing investisseur</b>
-          <span>{loading ? "Actualisation en cours…" : `${data.news.length} information(s) analysée(s)`}</span>
+          <b>Votre briefing</b>
+          <span>{loading ? "Actualisation en cours…" : `${data.news.length} information(s) retenue(s)`}</span>
         </div>
         <button className="secondary" onClick={loadRadar} disabled={loading}>
           <RefreshCw size={16} className={loading ? "spin" : ""} /> Actualiser
         </button>
       </div>
 
-      <div className="radar-indicators">
+      <div className="radar-indicators radar-indicators-v13">
         {data.indicators.map((item, index) => (
-          <article className="radar-indicator" key={`${item.label}-${index}`}>
+          <article className="radar-indicator radar-indicator-v13" key={`${item.label}-${index}`}>
             <span>{item.label}</span>
             <strong>{item.value}</strong>
             <small>{item.note}</small>
@@ -1211,96 +1223,146 @@ function InvestorRadar({ projects }) {
         ))}
       </div>
 
-      <div className="radar-layout">
-        <section className="radar-main">
-          <div className="section-title">
-            <span><Newspaper size={18} /> À retenir maintenant</span>
+      {activeProject && activeCalc && (
+        <section className="radar-personal-strip">
+          <div className="radar-personal-icon"><Sparkles size={20} /></div>
+          <div>
+            <span>POUR VOUS</span>
+            <b>{activeProject.name}</b>
+            <p>
+              Score {activeCalc.score}/100 · Cash-flow estimé {activeCalc.monthlyCashflow >= 0 ? "positif" : "négatif"} de {euro(Math.abs(activeCalc.monthlyCashflow))}/mois.
+            </p>
           </div>
-          <div className="radar-news-list">
-            {data.news.map((item, index) => (
-              <article className="radar-news-card card" key={item.id || index}>
-                <div className="radar-news-top">
+          <button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}>
+            Voir l’impact <ChevronRight size={16} />
+          </button>
+        </section>
+      )}
+
+      {featured && (
+        <section className={`radar-featured tone-${toneFor(featured.category)}`}>
+          <div className="radar-featured-content">
+            <div className="radar-featured-kicker">
+              <span>À RETENIR</span>
+              <RadarStatusBadge status={featured.status} />
+            </div>
+            <span className="radar-featured-category">{featured.category}</span>
+            <h2>{featured.title}</h2>
+            <p>{featured.summary}</p>
+            <div className="radar-featured-impact">
+              <b>Ce que cela change</b>
+              <span>{featured.impact}</span>
+            </div>
+            <div className="radar-featured-actions">
+              {featured.sourceUrl && (
+                <a href={featured.sourceUrl} target="_blank" rel="noreferrer">
+                  Lire la source <ExternalLink size={14} />
+                </a>
+              )}
+              <small>{featured.sourceName}{featured.sourceDate ? ` · ${featured.sourceDate}` : ""}</small>
+            </div>
+          </div>
+          <div className="radar-featured-visual">
+            {toneFor(featured.category) === "orange" ? <Landmark size={44} /> :
+             toneFor(featured.category) === "green" ? <TrendingUp size={44} /> :
+             toneFor(featured.category) === "purple" ? <Home size={44} /> :
+             toneFor(featured.category) === "red" ? <AlertTriangle size={44} /> :
+             <Newspaper size={44} />}
+          </div>
+        </section>
+      )}
+
+      <section className="radar-section-v13">
+        <div className="section-title">
+          <span><Newspaper size={18} /> Les autres informations</span>
+        </div>
+
+        <div className="radar-story-grid">
+          {secondaryNews.map((item, index) => (
+            <article className={`radar-story-card tone-${toneFor(item.category)}`} key={item.id || index}>
+              <div className="radar-story-head">
+                <span>{item.category}</span>
+                <RadarStatusBadge status={item.status} />
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.summary}</p>
+              <details>
+                <summary>Pourquoi c’est important <ChevronRight size={15} /></summary>
+                <div>
+                  <b>Impact</b>
+                  <p>{item.impact}</p>
+                  <b>Action recommandée</b>
+                  <p>{item.action}</p>
+                </div>
+              </details>
+              <footer>
+                <span>{item.sourceName}{item.sourceDate ? ` · ${item.sourceDate}` : ""}</span>
+                {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a>}
+              </footer>
+            </article>
+          ))}
+        </div>
+
+        {visibleRemaining.length > 0 && (
+          <div className="radar-compact-list">
+            {visibleRemaining.map((item, index) => (
+              <details className="radar-compact-item" key={item.id || index}>
+                <summary>
+                  <span className={`radar-dot tone-${toneFor(item.category)}`} />
                   <div>
-                    <span className="radar-category">{item.category}</span>
-                    <h2>{item.title}</h2>
+                    <small>{item.category}</small>
+                    <b>{item.title}</b>
                   </div>
-                  <RadarStatusBadge status={item.status} />
+                  <ChevronRight size={16} />
+                </summary>
+                <div className="radar-compact-body">
+                  <p>{item.summary}</p>
+                  <div><b>Impact :</b> {item.impact}</div>
+                  <div><b>À faire :</b> {item.action}</div>
+                  {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">Consulter la source <ExternalLink size={12} /></a>}
                 </div>
-                <p className="radar-summary">{item.summary}</p>
-                <div className="radar-decision-grid">
-                  <div><span>Impact investisseur</span><p>{item.impact}</p></div>
-                  <div><span>Action recommandée</span><p>{item.action}</p></div>
-                </div>
-                <footer>
-                  <span>
-                    <ShieldCheck size={14} />
-                    {item.sourceName || "Source non renseignée"}
-                    {item.sourceDate ? ` · ${item.sourceDate}` : ""}
-                  </span>
-                  {item.sourceUrl && (
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer">
-                      Consulter la source <ExternalLink size={13} />
-                    </a>
-                  )}
-                </footer>
-              </article>
+              </details>
+            ))}
+          </div>
+        )}
+
+        {remainingNews.length > 3 && (
+          <button className="radar-show-all" onClick={() => setShowAll(!showAll)}>
+            {showAll ? "Réduire la liste" : `Voir toutes les actualités (${remainingNews.length})`}
+          </button>
+        )}
+      </section>
+
+      <div className="radar-bottom-grid">
+        <section className="card radar-academy-v13">
+          <div className="section-title"><span><BookOpen size={18} /> Académie investisseur</span></div>
+          <div className="radar-tutorials radar-tutorials-v13">
+            {data.tutorials.map((tutorial, index) => (
+              <button key={`${tutorial.title}-${index}`}>
+                <div><span>{tutorial.topic}</span><b>{tutorial.title}</b></div>
+                <small>{tutorial.duration}</small>
+                <ChevronRight size={17} />
+              </button>
             ))}
           </div>
         </section>
 
-        <aside className="radar-side">
-          <section className="card radar-personal">
-            <div className="section-title"><span><Sparkles size={18} /> Impact sur vos projets</span></div>
-            {activeProject && activeCalc ? (
-              <>
-                <span className="radar-project-name">{activeProject.name}</span>
-                <strong>{activeCalc.score}/100</strong>
-                <p>{activeCalc.monthlyCashflow >= 0
-                  ? `Cash-flow estimé positif de ${euro(activeCalc.monthlyCashflow)} par mois avant fiscalité définitive.`
-                  : `Cash-flow estimé négatif de ${euro(Math.abs(activeCalc.monthlyCashflow))} par mois avant fiscalité définitive.`}</p>
-                <small>{projectCount} projet(s) pourront être croisés avec les futures actualités.</small>
-              </>
-            ) : (
-              <div className="radar-empty-mini">
-                <Building2 size={28} />
-                <b>Aucun projet enregistré</b>
-                <p>Ajoutez un projet pour contextualiser les tendances du marché.</p>
-              </div>
-            )}
-          </section>
-
-          <section className="card">
-            <div className="section-title"><span><BookOpen size={18} /> Académie investisseur</span></div>
-            <div className="radar-tutorials">
-              {data.tutorials.map((tutorial, index) => (
-                <button key={`${tutorial.title}-${index}`}>
-                  <div><span>{tutorial.topic}</span><b>{tutorial.title}</b></div>
-                  <small>{tutorial.duration} · {tutorial.level}</small>
-                  <ChevronRight size={17} />
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="card radar-case">
-            <div className="section-title"><span><Landmark size={18} /> Projet analysé</span></div>
-            <span><MapPin size={14} /> {data.caseStudy.city}</span>
-            <h3>{data.caseStudy.title}</h3>
-            {data.caseStudy.score != null && <strong>{data.caseStudy.score}/100</strong>}
-            <p>{data.caseStudy.summary}</p>
-            <small>{data.caseStudy.action}</small>
-          </section>
-        </aside>
+        <section className="card radar-case radar-case-v13">
+          <div className="section-title"><span><Landmark size={18} /> Projet analysé</span></div>
+          <span><MapPin size={14} /> {data.caseStudy.city}</span>
+          <h3>{data.caseStudy.title}</h3>
+          <p>{data.caseStudy.summary}</p>
+          <small>{data.caseStudy.action}</small>
+        </section>
       </div>
 
-      <div className="radar-disclaimer">
+      <div className="radar-disclaimer radar-disclaimer-v13">
         <ShieldCheck size={17} />
-        <p><b>Principe de fiabilité :</b> aucune information fiscale ou réglementaire n’est présentée comme applicable sans source, date et statut. Les contenus sont informatifs et ne remplacent pas un conseil juridique, fiscal ou financier personnalisé.</p>
+        <p><b>Fiabilité :</b> chaque information conserve sa source et son statut. Vérifiez toujours la publication officielle avant une décision fiscale, juridique ou financière.</p>
       </div>
     </div>
   );
 }
-
 
 export default function App() {
   const [page, setPage] = useState("dashboard");

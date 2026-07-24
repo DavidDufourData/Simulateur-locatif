@@ -1,33 +1,22 @@
-RENTA LOCATIVE V12 — RADAR BRANCHÉ
+RENTA LOCATIVE V13 — RADAR PLUS AÉRÉ
 
-Le Radar est maintenant préconfiguré et fonctionne sans ajouter de variable d’environnement.
-
-SOURCES INTÉGRÉES
-1. Service Public
-   Flux RSS officiel des actualités pour les particuliers.
-2. Insee
-   Page officielle des publications statistiques.
-3. Banque de France
-   Page officielle des publications statistiques.
-
-FICHIERS À REMPLACER
+À remplacer :
 - App.jsx
 - styles.css
 - api/investor-radar.js
 
-FONCTIONNEMENT
-- interrogation automatique des sources ;
-- filtrage immobilier, crédit, location, DPE et fiscalité ;
-- cache de six heures ;
-- suppression des doublons ;
-- conservation du lien officiel ;
-- aucune invention lorsqu’une source ne répond pas ;
-- diagnostic technique renvoyé par l’API.
+Le branchement des sources de la V12 est conservé.
 
-DÉPLOIEMENT
-1. Remplacez les trois fichiers.
-2. Déployez sur Vercel.
-3. Ouvrez /api/investor-radar pour vérifier la réponse JSON.
-4. Ouvrez ensuite la page Radar dans l’application.
+AMÉLIORATIONS VISUELLES
+- une actualité principale mise en avant ;
+- seulement deux cartes secondaires ;
+- les autres actualités sous forme de liste compacte dépliable ;
+- bouton « Voir toutes les actualités » ;
+- indicateurs défilables horizontalement sur mobile ;
+- section personnalisée plus courte ;
+- détails Impact / Action masqués jusqu’au clic ;
+- académie et étude de cas regroupées en bas ;
+- textes raccourcis visuellement sur mobile ;
+- couleurs différentes selon la catégorie.
 
-La variable RADAR_SOURCES_JSON est désormais facultative. Elle sert seulement à ajouter d’autres flux officiels.
+L’objectif est d’éviter le mur de texte tout en conservant l’intégralité des informations et des sources.
