@@ -1,19 +1,15 @@
-RENTA LOCATIVE V9 — INTERFACE CENTRÉE ET URL CLAIRE
+RENTA LOCATIVE V10 — OBJECTIFS DANS LE MENU MOBILE
 
-À remplacer :
-1. App.jsx par App.jsx fourni.
-2. styles.css par styles.css fourni.
+Remplacez :
+- App.jsx
+- styles.css
 
-À supprimer :
-- styles-a-ajouter.css
-- tout ancien correctif CSS V8 ajouté séparément
+Sur mobile, les cinq onglets affichés sont maintenant :
+1. Tableau de bord
+2. Simulateur
+3. Mes biens
+4. Analyse annonce
+5. Objectifs
 
-Le styles.css fourni est complet et remplace l'ancien.
-
-Améliorations :
-- titre de la zone parfaitement centré ;
-- badge discret « URL bientôt » clairement visible ;
-- carte limitée à une largeur propre ;
-- meilleure hauteur de saisie sur mobile ;
-- boutons visibles et alignés ;
-- URL seule détectée et expliquée sans fausse promesse.
+Comparer reste disponible dans la barre latérale sur ordinateur et depuis la carte du tableau de bord.
+Il est seulement masqué dans la barre inférieure mobile afin d'éviter une deuxième ligne mal affichée.

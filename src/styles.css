@@ -661,3 +661,16 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
     line-height:1.14;
   }
 }
+
+/* V10 — Objectifs prioritaire dans la navigation mobile */
+@media(max-width:780px){
+  .sidebar nav{
+    grid-template-columns:repeat(5,1fr);
+  }
+  .sidebar nav .nav-compare{
+    display:none;
+  }
+  .sidebar nav .nav-goals{
+    display:grid;
+  }
+}

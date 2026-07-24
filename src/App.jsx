@@ -1193,8 +1193,8 @@ export default function App() {
     ["simulator", "Simulateur", <Calculator size={18} />],
     ["portfolio", "Mes biens", <Building2 size={18} />],
     ["announcement", "Analyse annonce", <Sparkles size={18} />],
-    ["compare", "Comparer", <Scale size={18} />],
-    ["goals", "Objectifs", <Target size={18} />]
+    ["goals", "Objectifs", <Target size={18} />],
+    ["compare", "Comparer", <Scale size={18} />]
   ];
 
   const portfolioValue = projects.reduce((sum, p) => sum + toNumber(p.resaleValue), 0);
@@ -1209,7 +1209,11 @@ export default function App() {
         </button>
         <nav>
           {nav.map(([id, label, icon]) => (
-            <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)}>
+            <button
+              key={id}
+              className={`nav-item nav-${id} ${page === id ? "active" : ""}`}
+              onClick={() => setPage(id)}
+            >
               {icon}<span>{label}</span>
               {id === "portfolio" && <em>{projects.length}</em>}
               {!isPremium && ["announcement", "compare", "goals"].includes(id) && <Crown className="nav-premium-icon" size={13} />}
