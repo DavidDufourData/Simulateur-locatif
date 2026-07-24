@@ -1135,11 +1135,58 @@ function RadarStatusBadge({ status }) {
   return <span className={`radar-status ${className}`}>{label}</span>;
 }
 
+
+const RADAR_TUTORIALS = {
+  "Calculer une rentabilité réellement comparable": {
+    category: "Rentabilité",
+    duration: "4 min",
+    title: "Calculer une rentabilité réellement comparable",
+    intro: "Deux biens ne se comparent pas avec la seule rentabilité brute. Il faut intégrer l’ensemble du coût d’acquisition et les charges réellement supportées.",
+    steps: [
+      { title: "1. Calculer le coût total", text: "Prix d’achat + frais de notaire + travaux + mobilier + éventuels frais de dossier." },
+      { title: "2. Calculer les loyers annuels", text: "Loyer mensuel hors charges × 12, en conservant une hypothèse prudente de vacance locative." },
+      { title: "3. Retirer les charges", text: "Taxe foncière, copropriété non récupérable, assurance, gestion, entretien et vacance locative." },
+      { title: "4. Comparer le cash-flow", text: "Le rendement mesure la performance du bien. Le cash-flow mesure l’effort mensuel réel après le financement." }
+    ],
+    example: "Bien à 150 000 €, 12 000 € de frais, 8 000 € de travaux et 9 600 € de loyers annuels : la rentabilité brute calculée sur le seul prix serait trompeuse. Le coût total à retenir est de 170 000 €.",
+    takeaway: "Comparez toujours rendement net, cash-flow et risque locatif ensemble."
+  },
+  "Lire les trois documents clés d’une copropriété": {
+    category: "Copropriété",
+    duration: "6 min",
+    title: "Lire les trois documents clés d’une copropriété",
+    intro: "Une copropriété peut transformer un bon rendement apparent en mauvais investissement. Trois documents permettent d’identifier rapidement les principaux risques.",
+    steps: [
+      { title: "1. Les procès-verbaux d’assemblée générale", text: "Cherchez les travaux votés, refusés ou régulièrement reportés, ainsi que les conflits et impayés." },
+      { title: "2. Le relevé des charges", text: "Séparez les charges récupérables sur le locataire des dépenses restant à la charge du propriétaire." },
+      { title: "3. Le carnet d’entretien et le plan de travaux", text: "Vérifiez l’état de la toiture, des façades, de la chaudière collective, des ascenseurs et des réseaux." },
+      { title: "4. Les signaux d’alerte", text: "Fonds de travaux faible, nombreux impayés, gros chantier reporté ou syndic fréquemment remplacé." }
+    ],
+    example: "Un ravalement estimé à 300 000 € dans une copropriété de 30 lots représente en moyenne 10 000 € par lot avant répartition selon les tantièmes.",
+    takeaway: "Demandez les documents avant de formuler une offre définitive."
+  },
+  "Vérifier un projet LMNP avant de signer": {
+    category: "LMNP",
+    duration: "5 min",
+    title: "Vérifier un projet LMNP avant de signer",
+    intro: "Le LMNP peut réduire l’imposition des loyers, mais il ne compense ni un prix trop élevé ni une mauvaise demande locative.",
+    steps: [
+      { title: "1. Vérifier la demande meublée", text: "Étudiants, salariés en mobilité, jeunes actifs ou location moyenne durée : identifiez précisément la clientèle locale." },
+      { title: "2. Budgéter le mobilier", text: "Intégrez l’équipement initial, son renouvellement et la liste minimale obligatoire." },
+      { title: "3. Comparer micro-BIC et réel", text: "Le régime réel implique une comptabilité, mais permet généralement de déduire les charges et d’amortir le bien selon les règles applicables." },
+      { title: "4. Anticiper la revente", text: "La fiscalité et les règles du LMNP évoluent. Vérifiez toujours les textes applicables à la date de l’opération." }
+    ],
+    example: "Un avantage fiscal estimé ne doit jamais être ajouté artificiellement au cash-flow tant qu’il n’a pas été validé avec les données comptables du bien.",
+    takeaway: "Décidez d’abord sur la qualité économique du projet, puis optimisez sa fiscalité."
+  }
+};
+
 function InvestorRadar({ projects }) {
   const [data, setData] = useState(RADAR_FALLBACK);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [selectedTutorial, setSelectedTutorial] = useState(null);
 
   const loadRadar = async () => {
     setLoading(true);
@@ -1336,9 +1383,13 @@ function InvestorRadar({ projects }) {
       <div className="radar-bottom-grid">
         <section className="card radar-academy-v13">
           <div className="section-title"><span><BookOpen size={18} /> Académie investisseur</span></div>
+          <p className="radar-academy-intro">Trois guides courts pour sécuriser vos décisions.</p>
           <div className="radar-tutorials radar-tutorials-v13">
             {data.tutorials.map((tutorial, index) => (
-              <button key={`${tutorial.title}-${index}`}>
+              <button
+                key={`${tutorial.title}-${index}`}
+                onClick={() => setSelectedTutorial(RADAR_TUTORIALS[tutorial.title] || null)}
+              >
                 <div><span>{tutorial.topic}</span><b>{tutorial.title}</b></div>
                 <small>{tutorial.duration}</small>
                 <ChevronRight size={17} />
@@ -1377,6 +1428,47 @@ function InvestorRadar({ projects }) {
           )}
         </section>
       </div>
+
+      {selectedTutorial && (
+        <div className="academy-overlay" role="presentation" onClick={() => setSelectedTutorial(null)}>
+          <article className="academy-reader" role="dialog" aria-modal="true" aria-label={selectedTutorial.title} onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>{selectedTutorial.category} · {selectedTutorial.duration}</span>
+                <h2>{selectedTutorial.title}</h2>
+              </div>
+              <button onClick={() => setSelectedTutorial(null)} aria-label="Fermer le tutoriel"><X size={20} /></button>
+            </header>
+
+            <div className="academy-reader-body">
+              <p className="academy-lead">{selectedTutorial.intro}</p>
+
+              <div className="academy-steps">
+                {selectedTutorial.steps.map((step) => (
+                  <section key={step.title}>
+                    <h3>{step.title}</h3>
+                    <p>{step.text}</p>
+                  </section>
+                ))}
+              </div>
+
+              <aside className="academy-example">
+                <span>EXEMPLE CONCRET</span>
+                <p>{selectedTutorial.example}</p>
+              </aside>
+
+              <div className="academy-takeaway">
+                <Check size={18} />
+                <p><b>À retenir :</b> {selectedTutorial.takeaway}</p>
+              </div>
+            </div>
+
+            <footer>
+              <button className="primary" onClick={() => setSelectedTutorial(null)}>Terminer la lecture</button>
+            </footer>
+          </article>
+        </div>
+      )}
 
       <div className="radar-disclaimer radar-disclaimer-v13">
         <ShieldCheck size={17} />

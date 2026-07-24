@@ -1,13 +1,19 @@
-RENTA LOCATIVE V14 — RADAR COHÉRENT
+RENTA LOCATIVE V15 — ACADÉMIE FONCTIONNELLE
 
 Corrections :
-- « Voir l’impact » devient « Voir l’analyse ».
-- Le bouton mène désormais à une vraie analyse du projet actif.
-- La carte vide « Étude de cas personnalisée » est remplacée par :
-  score, rentabilité nette, cash-flow et commentaire contextualisé.
-- Les sources sont affichées sous forme de badges plus visibles.
-- Les balises HTML visibles comme <p> ou <em> sont nettoyées côté API.
-- La mise en page mobile est conservée.
+- Les trois cartes de l’Académie sont désormais cliquables.
+- Chaque clic ouvre un véritable tutoriel.
+- Lecture dans une fenêtre élégante sur ordinateur.
+- Lecture en panneau plein écran depuis le bas sur smartphone.
+- Contenus courts, structurés et concrets.
+- Aucun changement de page inutile.
+- Fermeture possible par la croix, le bouton final ou un clic à l’extérieur.
+- La V14 et les sources automatiques sont conservées.
+
+Tutoriels inclus :
+1. Comparer correctement la rentabilité.
+2. Lire les documents d’une copropriété.
+3. Vérifier un projet LMNP.
 
 À remplacer :
 - App.jsx
