@@ -1445,20 +1445,53 @@ Loyer estimé : 1 650 € par mois.`;
             <FileText size={17} />
             <span>Collez le texte de l’annonce</span>
           </div>
-          <div className="url-soon-badge" title="La lecture automatique d’une URL sera ajoutée prochainement.">
-            <Link2 size={13} />
-            <span>URL bientôt</span>
+          <div className="announcement-input-actions">
+            {input && (
+              <button
+                type="button"
+                className="quick-clear-button"
+                onClick={() => {
+                  setInput("");
+                  setError("");
+                }}
+                aria-label="Effacer le texte collé"
+                title="Effacer tout le texte"
+              >
+                <X size={14} />
+                <span>Effacer</span>
+              </button>
+            )}
+            <div className="url-soon-badge" title="La lecture automatique d’une URL sera ajoutée prochainement.">
+              <Link2 size={13} />
+              <span>URL bientôt</span>
+            </div>
           </div>
         </div>
 
-        <textarea
-          value={input}
-          onChange={(event) => {
-            setInput(event.target.value);
-            if (error) setError("");
-          }}
-          placeholder="Prix, surface, ville, charges, DPE, description, loyer éventuel…"
-        />
+        <div className="announcement-textarea-wrap">
+          <textarea
+            value={input}
+            onChange={(event) => {
+              setInput(event.target.value);
+              if (error) setError("");
+            }}
+            placeholder="Prix, surface, ville, charges, DPE, description, loyer éventuel…"
+          />
+          {input && (
+            <button
+              type="button"
+              className="textarea-clear-icon"
+              onClick={() => {
+                setInput("");
+                setError("");
+              }}
+              aria-label="Effacer le texte collé"
+              title="Effacer le texte collé"
+            >
+              <X size={17} />
+            </button>
+          )}
+        </div>
 
         {isStandaloneUrl(input) && (
           <div className="url-help-message">

@@ -1,51 +1,26 @@
-RENTA LOCATIVE V22 — ANALYSE ÉVOLUTIVE
+RENTA LOCATIVE V23 — EFFACEMENT RAPIDE DU TEXTE COLLÉ
 
-NOUVEAU PARCOURS
+NOUVEAUTÉ
+Le champ de collage de l’annonce dispose maintenant de deux commandes d’effacement rapide :
 
-1. Analyse de l’annonce
-L’application extrait uniquement les informations réellement présentes.
+1. Bouton « Effacer » dans l’en-tête du bloc
+2. Icône X directement dans le champ de texte
 
-2. Estimation du loyer
-La référence sectorielle officielle est récupérée via l’API ANIL/data.gouv.fr.
-L’utilisateur peut utiliser le loyer proposé ou saisir son propre montant.
-
-3. Validation du loyer
-Le bouton « Utiliser ce loyer » enregistre l’estimation comme hypothèse financière.
-
-4. Recalcul instantané
-Toute modification met immédiatement à jour :
-- rendement brut ;
-- rendement net ;
-- cash-flow ;
-- mensualité de crédit ;
-- score ;
-- verdict ;
-- prix de négociation conseillé.
-
-DONNÉES MODIFIABLES
-- loyer retenu ;
-- charges mensuelles ;
-- taxe foncière annuelle ;
-- apport en pourcentage ;
-- taux du crédit ;
-- durée du crédit.
-
-PROGRESSION
-Un bandeau indique :
-- annonce analysée ;
-- loyer estimé ;
-- loyer validé ;
-- charges renseignées ;
-- taxe foncière renseignée ;
-- analyse finale disponible.
-
-RÈGLE DE CONFIANCE
-Aucun résultat financier n’est affiché tant que les données indispensables ne sont pas présentes.
-L’utilisateur voit clairement quelles valeurs viennent de l’annonce, d’une source sectorielle ou d’une saisie manuelle.
+COMPORTEMENT
+- Les boutons apparaissent uniquement lorsqu’un texte est présent.
+- Un seul appui efface l’intégralité du texte collé.
+- Le message d’erreur éventuel est également supprimé.
+- Sur smartphone, le bouton d’en-tête devient une icône compacte.
+- Le bouton « Nouvelle analyse » continue de réinitialiser toute l’analyse.
 
 FICHIERS MODIFIÉS
 - App.jsx
 - styles.css
 
-FICHIER API CONSERVÉ
-- api/rent-reference.js
+BASE CONSERVÉE
+Cette version reprend toutes les fonctions de la V22 :
+- analyse évolutive ;
+- estimation ANIL ;
+- validation du loyer ;
+- recalcul instantané ;
+- progression de complétude.

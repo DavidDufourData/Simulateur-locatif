@@ -1525,3 +1525,54 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
   .analysis-steps{grid-template-columns:repeat(2,1fr)}
   .financial-input-grid{grid-template-columns:1fr}
 }
+
+
+/* V23 — effacement rapide du texte collé */
+.announcement-input-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.quick-clear-button{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:6px 9px;
+  border:1px solid rgba(220,83,100,.28);
+  border-radius:9px;
+  background:rgba(220,83,100,.08);
+  color:var(--red);
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.quick-clear-button:active{transform:scale(.97)}
+.announcement-textarea-wrap{
+  position:relative;
+}
+.announcement-textarea-wrap textarea{
+  width:100%;
+  padding-right:48px;
+}
+.textarea-clear-icon{
+  position:absolute;
+  top:10px;
+  right:10px;
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--card);
+  color:var(--muted);
+  cursor:pointer;
+  box-shadow:0 5px 16px rgba(0,0,0,.08);
+}
+.textarea-clear-icon:hover{color:var(--red);border-color:rgba(220,83,100,.3)}
+.textarea-clear-icon:active{transform:scale(.94)}
+@media(max-width:520px){
+  .quick-clear-button span{display:none}
+  .quick-clear-button{width:31px;height:31px;justify-content:center;padding:0}
+  .announcement-input-actions{gap:6px}
+}
