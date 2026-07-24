@@ -1,12 +1,19 @@
-VERSION V8 — DESIGN CONSERVÉ
+RENTA LOCATIVE V9 — INTERFACE CENTRÉE ET URL CLAIRE
 
-1. Remplacez votre App.jsx actuel par App.jsx.
-2. Remplacez votre fichier styles.css actuel par styles.css.
+À remplacer :
+1. App.jsx par App.jsx fourni.
+2. styles.css par styles.css fourni.
 
-Cette fois, le CSS fourni est le fichier complet : il remplace l'ancien.
-Le design Premium d'origine est conservé.
-Seules les modifications suivantes ont été faites :
-- suppression de l'onglet redondant « Lien + texte » ;
-- ajout discret de « Analyse par URL bientôt disponible » ;
-- détection et blocage d'une URL collée seule ;
-- aucune nouvelle mise en page ni gros texte ajouté.
+À supprimer :
+- styles-a-ajouter.css
+- tout ancien correctif CSS V8 ajouté séparément
+
+Le styles.css fourni est complet et remplace l'ancien.
+
+Améliorations :
+- titre de la zone parfaitement centré ;
+- badge discret « URL bientôt » clairement visible ;
+- carte limitée à une largeur propre ;
+- meilleure hauteur de saisie sur mobile ;
+- boutons visibles et alignés ;
+- URL seule détectée et expliquée sans fausse promesse.

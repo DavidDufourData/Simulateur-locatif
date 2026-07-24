@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart3, Building2, Calculator, Check, ChevronRight, CircleDollarSign,
   Crown, Download, Gauge, Home, LineChart, Moon, Plus, Save, Scale,
-  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, FileText, AlertTriangle, ThumbsUp, Search
+  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search
 } from "lucide-react";
 
 const PREMIUM_STORAGE_KEY = "renta-v7-premium";
@@ -732,7 +732,9 @@ Loyer estimé : 1 050 € par mois.`;
     const cleanInput = input.trim();
 
     if (isStandaloneUrl(cleanInput)) {
-      setError("La lecture automatique d’une URL arrive prochainement. Pour le moment, copiez puis collez le texte de l’annonce.");
+      setError(
+        "La lecture automatique d’une URL arrive prochainement. Pour le moment, ouvrez l’annonce puis copiez son texte complet."
+      );
       return;
     }
 
@@ -869,32 +871,55 @@ Loyer estimé : 1 050 € par mois.`;
         <div>
           <span className="eyebrow"><Sparkles size={13} /> OUTIL PREMIUM</span>
           <h1>Analysez une annonce en quelques secondes.</h1>
-          <p>Collez le texte de l’annonce. Renta Locative identifie les données essentielles et génère une première analyse financière et stratégique.</p>
+          <p>Collez le texte de l’annonce pour obtenir une première analyse financière et stratégique. L’import direct depuis une URL sera bientôt disponible.</p>
         </div>
         <div className="announcement-hero-icon"><FileText size={42} /></div>
       </section>
 
       <section className="card announcement-input-card">
-        <div className="input-tabs">
-          <button className="active"><FileText size={15} /> Texte de l’annonce</button>
-          <span className="url-coming-soon">Analyse par URL bientôt disponible</span>
+        <div className="announcement-input-head">
+          <div className="announcement-input-title">
+            <FileText size={17} />
+            <span>Collez le texte de l’annonce</span>
+          </div>
+          <div className="url-soon-badge" title="La lecture automatique d’une URL sera ajoutée prochainement.">
+            <Link2 size={13} />
+            <span>URL bientôt</span>
+          </div>
         </div>
+
         <textarea
           value={input}
           onChange={(event) => {
             setInput(event.target.value);
             if (error) setError("");
           }}
-          placeholder="Collez ici le texte complet de l’annonce : prix, surface, ville, charges, DPE, description, loyer éventuel…"
+          placeholder="Prix, surface, ville, charges, DPE, description, loyer éventuel…"
         />
+
+        {isStandaloneUrl(input) && (
+          <div className="url-help-message">
+            <AlertTriangle size={15} />
+            <span>Vous avez collé un lien seul. Copiez également le texte de l’annonce pour lancer l’analyse.</span>
+          </div>
+        )}
+
         {error && <p className="announcement-error">{error}</p>}
+
         <div className="announcement-input-footer">
-          <button className="secondary" onClick={() => setInput(demoText)}>Charger un exemple</button>
+          <button
+            className="secondary"
+            onClick={() => {
+              setInput(demoText);
+              setError("");
+            }}
+          >
+            Charger un exemple
+          </button>
           <button
             className="primary analyze-button"
             onClick={analyze}
             disabled={isStandaloneUrl(input)}
-            title={isStandaloneUrl(input) ? "Copiez le texte de l’annonce pour lancer l’analyse." : ""}
           >
             <Sparkles size={17} /> Analyser cette annonce
           </button>
