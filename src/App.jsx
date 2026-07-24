@@ -767,8 +767,8 @@ Loyer estimé : 1 050 € par mois.`;
             <h1>{result.city} · T{result.rooms} · {result.surface} m²</h1>
             <p>
               {usedAI
-                ? "Analyse générée par IA à partir du texte de l’annonce, puis calculée selon nos règles financières."
-                : "L’IA était indisponible : analyse générée par notre moteur de règles local, à partir du texte de l’annonce."}
+                ? "L’IA a uniquement extrait les informations du texte. Les calculs, le score et le verdict proviennent ensuite de règles financières déterministes."
+                : "L’IA n’a pas été utilisée. L’analyse provient uniquement du moteur de règles local et certaines données peuvent être estimées."}
             </p>
           </div>
           <div className="result-actions">
@@ -779,7 +779,7 @@ Loyer estimé : 1 050 € par mois.`;
 
         <section className={`ai-verdict ${result.verdictTone}`}>
           <div>
-            <span>VERDICT RENTA IA</span>
+            <span>{usedAI ? "VERDICT ASSISTÉ PAR IA" : "VERDICT AUTOMATIQUE"}</span>
             <strong>{result.verdict}</strong>
             <p>
               {result.verdict === "ACHETER"
@@ -839,7 +839,7 @@ Loyer estimé : 1 050 € par mois.`;
         <section className="card ai-advice-card">
           <div className="ai-advice-icon"><Sparkles size={22} /></div>
           <div>
-            <span>CONSEIL RENTA IA</span>
+            <span>{usedAI ? "CONSEIL ASSISTÉ PAR IA" : "CONSEIL AUTOMATIQUE"}</span>
             <p>
               À {euro(result.price)}, le projet affiche un rendement brut estimé à {pct(result.grossYield)}.
               Une offre proche de {euro(result.advisedPrice)} améliorerait la sécurité financière et le cash-flow.
@@ -858,7 +858,7 @@ Loyer estimé : 1 050 € par mois.`;
         <div>
           <span className="eyebrow"><Sparkles size={13} /> OUTIL PREMIUM</span>
           <h1>Analysez une annonce en quelques secondes.</h1>
-          <p>Collez le texte de l’annonce. Renta Locative identifie les données essentielles et génère une première analyse financière et stratégique.</p>
+          <p>Collez le texte de l’annonce. Renta Locative extrait les données essentielles. Lorsque l’IA est disponible, elle aide à lire le texte ; les calculs financiers restent réalisés par notre moteur déterministe.</p>
         </div>
         <div className="announcement-hero-icon"><FileText size={42} /></div>
       </section>
@@ -887,8 +887,7 @@ Loyer estimé : 1 050 € par mois.`;
       </div>
 
       <p className="analysis-disclaimer">
-        Cette version réalise une analyse indicative à partir du texte collé. Elle ne remplace ni une étude de marché locale,
-        ni un diagnostic technique, fiscal ou juridique.
+        Cette analyse est indicative. Les données absentes peuvent être estimées par le moteur local et doivent être vérifiées. Elle ne remplace ni une étude de marché locale, ni un diagnostic technique, fiscal ou juridique.
       </p>
     </div>
   );
