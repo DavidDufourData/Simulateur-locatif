@@ -77,19 +77,26 @@ const FALLBACK = {
 };
 
 function cleanText(value = "") {
-  return value
+  let text = String(value || "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ")
+    .replace(/&nbsp;|&#160;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#39;|&apos;/g, "'");
+
+  // Certains flux encodent deux fois leurs balises HTML.
+  text = text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  return text;
 }
 
 function normalize(value = "") {
