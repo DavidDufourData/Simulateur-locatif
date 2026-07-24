@@ -4,7 +4,7 @@ import {
   BarChart3, Building2, Calculator, Check, ChevronRight, CircleDollarSign,
   Crown, Download, Gauge, Home, LineChart, Moon, Plus, Save, Scale,
   Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search,
-  Newspaper, BookOpen, Landmark, RefreshCw, ShieldCheck, Clock3, ExternalLink, Activity, MapPin
+  Newspaper, BookOpen, Landmark, RefreshCw, ShieldCheck, Clock3, ExternalLink, Activity, MapPin, UserRound, Settings, FolderOpen
 } from "lucide-react";
 
 const PREMIUM_STORAGE_KEY = "renta-v7-premium";
@@ -1229,6 +1229,92 @@ function InvestorRadar({ projects }) {
     return "blue";
   };
 
+
+  const projectNewsImpact = useMemo(() => {
+    if (!featured || !activeProject || !activeCalc) return null;
+
+    const raw = `${featured.category || ""} ${featured.title || ""} ${featured.summary || ""}`.toLocaleLowerCase("fr-FR");
+    const has = (...terms) => terms.some((term) => raw.includes(term));
+
+    if (has("micro-entreprise", "entreprise individuelle", "parentalité", "démarches étudiantes")) {
+      return {
+        level: "none",
+        label: "Aucun impact direct identifié",
+        summary: `Cette actualité ne concerne pas directement votre projet « ${activeProject.name} ».`,
+        detail: "Elle porte sur un autre régime ou une autre situation administrative. Elle reste informative, mais ne doit pas modifier vos hypothèses de rentabilité.",
+        action: "Aucune modification de votre simulation n’est recommandée."
+      };
+    }
+
+    if (has("lmnp", "location meublée", "location meublee", "bénéfices industriels", "bic", "amortissement")) {
+      return {
+        level: "high",
+        label: "Impact fiscal potentiel",
+        summary: `Cette actualité peut concerner la fiscalité de « ${activeProject.name} ».`,
+        detail: `Votre cash-flow actuel est estimé à ${euro(activeCalc.monthlyCashflow)}/mois avant fiscalité définitive. Une évolution du LMNP peut modifier le résultat après impôt sans changer la rentabilité physique du bien.`,
+        action: "Vérifiez la date d’application et faites valider l’impact par votre comptable avant de modifier vos calculs."
+      };
+    }
+
+    if (has("taxe foncière", "taxe fonciere", "impôts locaux", "impots locaux")) {
+      return {
+        level: "medium",
+        label: "Charges à vérifier",
+        summary: `Cette actualité peut affecter les charges annuelles de « ${activeProject.name} ».`,
+        detail: `La taxe foncière enregistrée dans votre projet est de ${euro(toNumber(activeProject.propertyTax))} par an. Une variation se répercute directement sur le cash-flow.`,
+        action: "Comparez le montant renseigné avec le dernier avis de taxe foncière de la commune."
+      };
+    }
+
+    if (has("crédit", "credit", "prêt", "pret", "taux", "banque", "financement")) {
+      return {
+        level: "medium",
+        label: "Financement potentiellement concerné",
+        summary: `Les conditions de crédit peuvent modifier la mensualité de « ${activeProject.name} ».`,
+        detail: `Votre simulation utilise actuellement un taux de ${activeProject.rate || "—"} % sur ${activeProject.loanYears || "—"} ans. Une variation de taux doit être testée dans le simulateur avant toute décision.`,
+        action: "Créez un scénario avec le nouveau taux bancaire réellement proposé."
+      };
+    }
+
+    if (has("dpe", "rénovation", "renovation", "énergie", "energie", "travaux", "passoire")) {
+      return {
+        level: "high",
+        label: "Risque technique à contrôler",
+        summary: `Cette actualité peut influencer la louabilité ou le budget travaux de « ${activeProject.name} ».`,
+        detail: `Votre projet prévoit ${euro(toNumber(activeProject.works))} de travaux. Les règles énergétiques peuvent imposer un calendrier ou un budget différent.`,
+        action: "Contrôlez le DPE, les devis et la date d’entrée en vigueur de la règle."
+      };
+    }
+
+    if (has("loyer", "bail", "locataire", "location", "encadrement")) {
+      return {
+        level: "medium",
+        label: "Gestion locative concernée",
+        summary: `Cette actualité peut concerner le loyer ou le bail de « ${activeProject.name} ».`,
+        detail: `Le loyer retenu dans votre simulation est de ${euro(toNumber(activeProject.rent))}/mois. Vérifiez qu’il reste compatible avec les règles locales et le type de bail.`,
+        action: "Contrôlez l’encadrement éventuel, l’IRL et les clauses du bail."
+      };
+    }
+
+    if (has("prix", "immobilier", "logement", "transaction", "marché", "marche")) {
+      return {
+        level: "low",
+        label: "Contexte de marché",
+        summary: `Cette actualité apporte un contexte utile pour « ${activeProject.name} », sans recalcul automatique.`,
+        detail: "Une tendance nationale ne suffit pas à modifier la valeur d’un bien. La commune, le quartier et les ventes comparables restent prioritaires.",
+        action: "Comparez avec des transactions récentes et des annonces réellement concurrentes."
+      };
+    }
+
+    return {
+      level: "none",
+      label: "Lien non établi",
+      summary: `Aucun effet suffisamment précis n’est identifié sur « ${activeProject.name} ».`,
+      detail: "Le Radar évite d’attribuer artificiellement une actualité générale à votre projet.",
+      action: "Conservez vos hypothèses tant qu’une source plus spécifique ne les remet pas en cause."
+    };
+  }, [featured, activeProject, activeCalc]);
+
   return (
     <div className="page-section radar-page radar-v13">
       <section className="radar-hero radar-hero-compact">
@@ -1270,18 +1356,16 @@ function InvestorRadar({ projects }) {
         ))}
       </div>
 
-      {activeProject && activeCalc && (
-        <section className="radar-personal-strip">
+      {projectNewsImpact && (
+        <section className={`radar-personal-strip impact-${projectNewsImpact.level}`}>
           <div className="radar-personal-icon"><Sparkles size={20} /></div>
           <div>
-            <span>POUR VOUS</span>
-            <b>{activeProject.name}</b>
-            <p>
-              Score {activeCalc.score}/100 · Cash-flow estimé {activeCalc.monthlyCashflow >= 0 ? "positif" : "négatif"} de {euro(Math.abs(activeCalc.monthlyCashflow))}/mois.
-            </p>
+            <span>IMPACT SUR VOTRE PROJET</span>
+            <b>{projectNewsImpact.label}</b>
+            <p>{projectNewsImpact.summary}</p>
           </div>
           <button onClick={() => document.getElementById("radar-project-impact")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
-            Voir l’analyse <ChevronRight size={16} />
+            Voir le détail <ChevronRight size={16} />
           </button>
         </section>
       )}
@@ -1398,32 +1482,27 @@ function InvestorRadar({ projects }) {
           </div>
         </section>
 
-        <section id="radar-project-impact" className="card radar-case radar-case-v13 radar-project-analysis">
-          <div className="section-title"><span><Landmark size={18} /> Analyse de votre projet</span></div>
-          {activeProject && activeCalc ? (
+        <section id="radar-project-impact" className={`card radar-case radar-case-v13 radar-news-project-impact impact-${projectNewsImpact?.level || "none"}`}>
+          <div className="section-title"><span><Sparkles size={18} /> Impact de l’actualité sur votre projet</span></div>
+          {projectNewsImpact && featured ? (
             <>
-              <span><MapPin size={14} /> {activeProject.city || "Ville non renseignée"}</span>
-              <h3>{activeProject.name}</h3>
-              <div className="radar-project-scoreline">
-                <strong>{activeCalc.score}/100</strong>
-                <span>{activeCalc.score >= 80 ? "Projet très solide" : activeCalc.score >= 65 ? "Projet équilibré" : "Projet à optimiser"}</span>
+              <span className="radar-impact-project"><MapPin size={14} /> {activeProject.name}{activeProject.city ? ` · ${activeProject.city}` : ""}</span>
+              <h3>{projectNewsImpact.label}</h3>
+              <p className="radar-impact-linked-news">Actualité analysée : <b>{featured.title}</b></p>
+              <div className="radar-impact-detail">
+                <span>ANALYSE</span>
+                <p>{projectNewsImpact.detail}</p>
               </div>
-              <div className="radar-project-facts">
-                <div><small>Rentabilité nette</small><b>{pct(activeCalc.netYield)}</b></div>
-                <div><small>Cash-flow mensuel</small><b>{euro(activeCalc.monthlyCashflow)}</b></div>
+              <div className="radar-impact-action">
+                <Check size={17} />
+                <p><b>Action recommandée :</b> {projectNewsImpact.action}</p>
               </div>
-              <p>
-                {activeCalc.monthlyCashflow >= 0
-                  ? "Le projet conserve un cash-flow positif dans les hypothèses enregistrées. Les actualités de crédit, de fiscalité et de location peuvent toutefois modifier ce résultat."
-                  : "Le projet présente actuellement un effort d’épargne mensuel. Une évolution du financement, du loyer ou des charges peut modifier cet équilibre."}
-              </p>
-              <small>Analyse calculée à partir de vos données enregistrées, avant fiscalité définitive.</small>
+              <small>Cette mise en relation est indicative. Elle ne remplace pas la vérification de la source officielle.</small>
             </>
           ) : (
             <>
-              <span><MapPin size={14} /> Aucun projet</span>
-              <h3>Ajoutez un projet à analyser</h3>
-              <p>Cette section affichera ensuite son score, sa rentabilité et son cash-flow.</p>
+              <h3>Aucun projet à croiser</h3>
+              <p>Enregistrez un projet pour mesurer l’impact potentiel de l’actualité principale.</p>
             </>
           )}
         </section>
@@ -1474,6 +1553,54 @@ function InvestorRadar({ projects }) {
         <ShieldCheck size={17} />
         <p><b>Fiabilité :</b> chaque information conserve sa source et son statut. Vérifiez toujours la publication officielle avant une décision fiscale, juridique ou financière.</p>
       </div>
+    </div>
+  );
+}
+
+
+function ProfileHub({ projects, isPremium, premiumEmail, onGoals, onCompare, onExport, onPremium }) {
+  return (
+    <div className="page-section profile-hub">
+      <section className="profile-hero card">
+        <div className="profile-avatar"><UserRound size={28} /></div>
+        <div>
+          <span>MON ESPACE</span>
+          <h1>{premiumEmail || "Votre profil investisseur"}</h1>
+          <p>Retrouvez ici les fonctions secondaires sans encombrer votre navigation principale.</p>
+        </div>
+        <div className={`profile-plan ${isPremium ? "active" : ""}`}>
+          {isPremium ? <Check size={17} /> : <Crown size={17} />}
+          <b>{isPremium ? "Premium actif" : "Offre gratuite"}</b>
+        </div>
+      </section>
+
+      <div className="profile-menu-grid">
+        <button className="profile-menu-card" onClick={onGoals}>
+          <Target />
+          <div><b>Mes objectifs</b><span>Patrimoine, revenus et progression.</span></div>
+          <ChevronRight />
+        </button>
+        <button className="profile-menu-card" onClick={onCompare}>
+          <Scale />
+          <div><b>Comparer mes projets</b><span>Classement et comparaison détaillée.</span></div>
+          <ChevronRight />
+        </button>
+        <button className="profile-menu-card" onClick={onExport}>
+          <Download />
+          <div><b>Exporter mes données</b><span>Créer un rapport PDF de vos analyses.</span></div>
+          <ChevronRight />
+        </button>
+        <button className="profile-menu-card" onClick={onPremium}>
+          <Crown />
+          <div><b>{isPremium ? "Gérer Premium" : "Découvrir Premium"}</b><span>{projects.length} projet(s) enregistré(s).</span></div>
+          <ChevronRight />
+        </button>
+      </div>
+
+      <section className="card profile-settings">
+        <div className="section-title"><span><Settings size={18} /> Organisation de l’application</span></div>
+        <p>L’analyse d’annonce, vos biens et le Radar du marché restent accessibles directement. Les objectifs, comparaisons et exports sont regroupés ici.</p>
+      </section>
     </div>
   );
 }
@@ -1589,13 +1716,11 @@ export default function App() {
   };
 
   const nav = [
-    ["dashboard", "Tableau de bord", <Home size={18} />],
-    ["simulator", "Simulateur", <Calculator size={18} />],
+    ["dashboard", "Accueil", <Home size={18} />],
+    ["announcement", "Analyse", <Sparkles size={18} />],
     ["portfolio", "Mes biens", <Building2 size={18} />],
-    ["announcement", "Analyse annonce", <Sparkles size={18} />],
-    ["radar", "Radar marché", <Newspaper size={18} />],
-    ["goals", "Objectifs", <Target size={18} />],
-    ["compare", "Comparer", <Scale size={18} />]
+    ["radar", "Radar", <Newspaper size={18} />],
+    ["profile", "Profil", <UserRound size={18} />]
   ];
 
   const portfolioValue = projects.reduce((sum, p) => sum + toNumber(p.resaleValue), 0);
@@ -1617,7 +1742,7 @@ export default function App() {
             >
               {icon}<span>{label}</span>
               {id === "portfolio" && <em>{projects.length}</em>}
-              {!isPremium && ["announcement", "compare", "goals", "radar"].includes(id) && <Crown className="nav-premium-icon" size={13} />}
+              {!isPremium && ["announcement", "radar"].includes(id) && <Crown className="nav-premium-icon" size={13} />}
             </button>
           ))}
         </nav>
@@ -1634,8 +1759,12 @@ export default function App() {
       <main className="main">
         <header className="topbar">
           <div>
-            <span>RENTA LOCATIVE V7</span>
-            <h2>{page === "dashboard" ? "Bienvenue sur Renta Locative 👋" : nav.find((item) => item[0] === page)?.[1]}</h2>
+            <span>RENTA LOCATIVE V17</span>
+            <h2>{page === "dashboard" ? "Bienvenue sur Renta Locative 👋"
+              : page === "simulator" ? "Simulateur"
+              : page === "compare" ? "Comparer"
+              : page === "goals" ? "Objectifs"
+              : nav.find((item) => item[0] === page)?.[1]}</h2>
           </div>
           <div className="top-actions">
             <button className="icon-button" onClick={() => setDark(!dark)}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
@@ -1648,47 +1777,59 @@ export default function App() {
         </header>
 
         {page === "dashboard" && (
-          <div className="page-section">
-            <section className="dashboard-hero">
-              <div>
-                <span className="eyebrow">COPILOTE IMMOBILIER</span>
-                <h1>Pilotez vos investissements avec une vision claire.</h1>
-                <p>Analysez, comparez et suivez chaque projet depuis un seul tableau de bord.</p>
+          <div className="page-section dashboard-v17">
+            <section className="analysis-hero-v17">
+              <div className="analysis-hero-copy">
+                <span className="eyebrow"><Sparkles size={14} /> ANALYSE INTELLIGENTE</span>
+                <h1>Une annonce vous intéresse&nbsp;? Vérifiez-la avant de visiter.</h1>
+                <p>Collez le lien ou le texte d’une annonce et obtenez un score, un prix conseillé, la rentabilité estimée et les principaux risques.</p>
                 <div className="hero-buttons">
-                  <button className="primary" onClick={() => setPage("simulator")}>Lancer une simulation <ChevronRight size={17} /></button>
-                  <button className="secondary" onClick={() => setPage("portfolio")}>Voir mon portefeuille</button>
+                  <button className="primary hero-analysis-button" onClick={() => setPage("announcement")}>
+                    Analyser une annonce <ChevronRight size={17} />
+                  </button>
+                  <button className="secondary" onClick={() => setPage("simulator")}>Faire une simulation manuelle</button>
+                </div>
+                <div className="analysis-proof">
+                  <span><Check size={14} /> Score sur 100</span>
+                  <span><Check size={14} /> Prix conseillé</span>
+                  <span><Check size={14} /> Risques détectés</span>
                 </div>
               </div>
-              <div className="dashboard-score">
-                <span>Score du projet actif</span>
-                <strong>{calc.score}<small>/100</small></strong>
-                <b>{calc.score >= 80 ? "Excellent investissement" : calc.score >= 65 ? "Projet solide" : "À optimiser"}</b>
-                <div className="progress"><i style={{ width: `${calc.score}%` }} /></div>
+              <div className="analysis-preview-v17">
+                <div className="preview-top"><span>APERÇU DE L’ANALYSE</span><b>Démo</b></div>
+                <div className="preview-score"><strong>82</strong><small>/100</small></div>
+                <h3>Opportunité à négocier</h3>
+                <div className="preview-values">
+                  <div><small>Prix affiché</small><b>219 000 €</b></div>
+                  <div><small>Prix conseillé</small><b>204 000 €</b></div>
+                </div>
+                <div className="preview-alert"><AlertTriangle size={16} /><span>DPE et charges à vérifier</span></div>
               </div>
             </section>
 
-            <div className="metrics dashboard-metrics">
-              <Metric icon={<Building2 />} label="Valeur du portefeuille" value={euro(portfolioValue)} note={`${projects.length} bien(s) enregistré(s)`} />
-              <Metric icon={<Scale />} label="Patrimoine net" value={euro(portfolioValue - portfolioDebt)} note={`Dette estimée : ${euro(portfolioDebt)}`} tone="green" />
-              <Metric icon={<WalletCards />} label="Cash-flow global" value={euro(portfolioCashflow)} note="Avant fiscalité définitive" tone={portfolioCashflow >= 0 ? "purple" : "red"} />
-              <Metric icon={<Gauge />} label="Projet actif" value={`${calc.score}/100`} note={project.name} tone="orange" />
+            <div className="dashboard-v17-metrics">
+              <div><span>Portefeuille</span><b>{euro(portfolioValue)}</b><small>{projects.length} bien(s)</small></div>
+              <div><span>Cash-flow global</span><b>{euro(portfolioCashflow)}</b><small>Avant fiscalité</small></div>
+              <div><span>Projet actif</span><b>{calc.score}/100</b><small>{project.name}</small></div>
             </div>
 
-            <div className="dashboard-grid">
-              <section className="card">
-                <div className="section-title"><span><LineChart size={18} /> Projection du projet actif</span><button onClick={() => setPage("simulator")}>Modifier</button></div>
-                <ProjectionChart data={calc.projection} />
-              </section>
-              <Advice project={project} calc={calc} />
-            </div>
-
-            <div className="quick-grid">
-              <button onClick={() => setPage("simulator")}><Calculator /><b>Analyser un bien</b><span>Calculez rendement, cash-flow et TRI.</span></button>
-              <button className="quick-premium featured-ai" onClick={() => setPage("announcement")}><Sparkles /><b>Analyser une annonce <Crown size={13} /></b><span>Obtenez un score, un verdict et un prix conseillé.</span></button>
-              <button className={!isPremium ? "quick-premium" : ""} onClick={() => setPage("compare")}><Scale /><b>Comparer deux projets {!isPremium && <Crown size={13} />}</b><span>Repérez le meilleur équilibre global.</span></button>
-              <button className={!isPremium ? "quick-premium" : ""} onClick={() => setPage("goals")}><Target /><b>Suivre vos objectifs {!isPremium && <Crown size={13} />}</b><span>Visualisez votre progression patrimoniale.</span></button>
-              <button className={!isPremium ? "quick-premium radar-quick" : "radar-quick"} onClick={() => setPage("radar")}><Newspaper /><b>Radar investisseur {!isPremium && <Crown size={13} />}</b><span>Actualités, fiscalité et tendances traduites en décisions concrètes.</span></button>
-            </div>
+            <section className="dashboard-actions-v17">
+              <button onClick={() => setPage("portfolio")}>
+                <div className="action-icon"><FolderOpen /></div>
+                <div><b>Mes investissements</b><span>Consultez vos projets enregistrés et leurs résultats.</span></div>
+                <ChevronRight />
+              </button>
+              <button onClick={() => setPage("compare")}>
+                <div className="action-icon"><Scale /></div>
+                <div><b>Comparer des biens</b><span>Identifiez le projet le plus équilibré.</span></div>
+                <ChevronRight />
+              </button>
+              <button onClick={() => setPage("radar")}>
+                <div className="action-icon"><Newspaper /></div>
+                <div><b>Radar du marché</b><span>Actualités et changements utiles à vos projets.</span></div>
+                <ChevronRight />
+              </button>
+            </section>
           </div>
         )}
 
@@ -1719,7 +1860,7 @@ export default function App() {
           isPremium
             ? <InvestorRadar projects={projects} />
             : <PremiumGate
-                title="Accédez au Radar investisseur"
+                title="Accédez au Radar du marché"
                 description="Recevez une veille immobilière structurée, sourcée et traduite en conséquences concrètes pour vos projets."
                 features={[
                   "Tendances du crédit, des prix et du marché locatif",
@@ -1780,6 +1921,18 @@ export default function App() {
                 }
                 onUnlock={() => setCheckoutOpen(true)}
               />
+        )}
+
+        {page === "profile" && (
+          <ProfileHub
+            projects={projects}
+            isPremium={isPremium}
+            premiumEmail={premiumEmail}
+            onGoals={() => setPage("goals")}
+            onCompare={() => setPage("compare")}
+            onExport={exportPdf}
+            onPremium={() => setCheckoutOpen(true)}
+          />
         )}
       </main>
 

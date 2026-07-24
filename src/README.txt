@@ -1,21 +1,29 @@
-RENTA LOCATIVE V15 — ACADÉMIE FONCTIONNELLE
+RENTA LOCATIVE V17 — NAVIGATION ET POSITIONNEMENT PREMIUM
 
-Corrections :
-- Les trois cartes de l’Académie sont désormais cliquables.
-- Chaque clic ouvre un véritable tutoriel.
-- Lecture dans une fenêtre élégante sur ordinateur.
-- Lecture en panneau plein écran depuis le bas sur smartphone.
-- Contenus courts, structurés et concrets.
-- Aucun changement de page inutile.
-- Fermeture possible par la croix, le bouton final ou un clic à l’extérieur.
-- La V14 et les sources automatiques sont conservées.
+Objectif :
+Faire de l’analyse d’annonce la fonction emblématique de l’application, tout en conservant le simulateur, le portefeuille et le Radar.
 
-Tutoriels inclus :
-1. Comparer correctement la rentabilité.
-2. Lire les documents d’une copropriété.
-3. Vérifier un projet LMNP.
+NOUVELLE NAVIGATION PRINCIPALE
+- Accueil
+- Analyse
+- Mes biens
+- Radar
+- Profil
 
-À remplacer :
+MODIFICATIONS
+- Suppression du doublon « Radar investisseur / Radar marché » : un seul nom, « Radar du marché ».
+- Analyse d’annonce mise au premier plan dès l’accueil.
+- Accueil allégé : une grande action principale et trois accès secondaires.
+- Les objectifs, comparaisons, exports et Premium sont regroupés dans Profil.
+- Navigation mobile limitée à cinq onglets utiles.
+- Le simulateur manuel reste accessible depuis l’accueil et depuis les projets.
+- L’impact de l’actualité sur le projet, corrigé en V16, est conservé.
+- L’Académie fonctionnelle de la V15 est conservée.
+
+FICHIERS À REMPLACER
 - App.jsx
 - styles.css
 - api/investor-radar.js
+
+REMARQUE
+Le logo /logo-renta-locative.png reste attendu dans le projet hôte comme dans les versions précédentes.
