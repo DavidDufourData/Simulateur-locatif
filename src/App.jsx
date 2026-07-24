@@ -1021,6 +1021,7 @@ function AnnouncementAnalysis({ onExport }) {
     interestRate: "3,2",
     durationYears: "25"
   });
+  const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -1115,6 +1116,7 @@ Loyer estimé : 1 650 € par mois.`;
       interestRate: "3,2",
       durationYears: "25"
     });
+    setShowAdvancedDetails(false);
   };
 
   const marketRentEstimate = result
@@ -1155,278 +1157,212 @@ Loyer estimé : 1 650 € par mois.`;
   }
 
   if (result) {
+    const missingActions = [
+      !marketRentEstimate ? "Estimer le loyer du secteur" : null,
+      toNumber(validatedRent) <= 0 ? "Valider le loyer retenu" : null,
+      result.propertyType !== "house" && String(financialInputs.charges).trim() === "" ? "Renseigner les charges" : null,
+      toNumber(financialInputs.propertyTax) <= 0 ? "Renseigner la taxe foncière" : null
+    ].filter(Boolean);
+
+    const automaticNextStep = !marketRentEstimate
+      ? "Rechercher automatiquement le loyer du secteur"
+      : toNumber(validatedRent) <= 0
+      ? "Utiliser le loyer estimé"
+      : !liveResult.financialReady
+      ? "Compléter les informations manquantes"
+      : "Consulter le résultat final";
+
+    const handleAutomaticCompletion = () => {
+      if (!marketRentEstimate) {
+        if (rentCity.trim()) loadOfficialRentReference(result, rentCity);
+        return;
+      }
+      if (toNumber(validatedRent) <= 0) {
+        setValidatedRent(String(marketRentEstimate.central));
+        return;
+      }
+      setShowAdvancedDetails(true);
+    };
+
     return (
-      <div className="page-section announcement-page">
-        <div className="announcement-result-header">
+      <div className="page-section announcement-page novice-analysis-page">
+        <div className="announcement-result-header simplified-header">
           <div>
-            <span className="eyebrow">
-              <Sparkles size={13} /> {usedAI ? "ANALYSE IA" : "ANALYSE AUTOMATIQUE (MODE SECOURS)"}
-            </span>
+            <span className="eyebrow"><Sparkles size={13} /> ANALYSE DE L’ANNONCE</span>
             <h1>
               {result.city} · {result.propertyLabel}
               {result.rooms ? ` ${result.rooms} pièces` : ""}
               {result.surface ? ` · ${result.surface} m²` : ""}
             </h1>
-            <p>
-              {usedAI
-                ? "Les données factuelles sont extraites du texte. Les estimations restent clairement séparées."
-                : "Analyse locale du texte : aucune donnée absente n’est remplacée par une valeur supposée."}
-            </p>
-            <div className={`analysis-confidence confidence-${result.confidence}`}>
-              Niveau de complétude : {result.confidence}
-              {!result.financialReady && <span> · calcul financier suspendu</span>}
-            </div>
+            <p>Voici l’essentiel. Les calculs avancés restent accessibles plus bas.</p>
           </div>
           <div className="result-actions">
-            <button className="secondary" onClick={reset}>Nouvelle analyse</button>
-            <button className="primary" onClick={onExport}><Download size={16} /> Rapport PDF</button>
+            <button className="secondary" onClick={reset}>Nouvelle annonce</button>
           </div>
         </div>
 
-        <section className="card analysis-progress-card">
-          <div className="analysis-progress-head">
-            <div><span>ANALYSE ÉVOLUTIVE</span><strong>{completionPercent} % complétée</strong></div>
-            <b>{liveResult?.financialReady ? "Analyse financière active" : "Données à compléter"}</b>
+        <section className={`novice-verdict-card ${liveResult.verdictTone}`}>
+          <div className="novice-verdict-copy">
+            <span>VERDICT ACTUEL</span>
+            <strong>{liveResult.verdict === "À COMPLÉTER" ? "Analyse incomplète" : liveResult.verdict}</strong>
+            <p>
+              {liveResult.financialReady
+                ? liveResult.verdict === "ACHETER"
+                  ? "Le projet paraît intéressant avec les hypothèses retenues."
+                  : liveResult.verdict === "NÉGOCIER"
+                  ? "Le bien peut être intéressant, mais le prix mérite d’être négocié."
+                  : "Le niveau de rendement ne compense pas suffisamment les risques."
+                : `Il reste ${missingActions.length} étape${missingActions.length > 1 ? "s" : ""} pour obtenir une analyse financière fiable.`}
+            </p>
+          </div>
+          <div className="novice-score">
+            <strong>{liveResult.score ?? completionPercent}</strong>
+            <small>{liveResult.score !== null ? "/100" : "% complet"}</small>
+          </div>
+        </section>
+
+        <section className="card novice-next-step-card">
+          <div className="novice-next-step-icon"><Sparkles size={23} /></div>
+          <div className="novice-next-step-copy">
+            <span>PROCHAINE ÉTAPE CONSEILLÉE</span>
+            <strong>{automaticNextStep}</strong>
+            <p>
+              {missingActions.length
+                ? `À faire : ${missingActions.join(" · ")}.`
+                : "Toutes les données essentielles sont présentes. Vous pouvez consulter le résultat détaillé."}
+            </p>
+          </div>
+          <button className="primary novice-auto-button" onClick={handleAutomaticCompletion}>
+            <Sparkles size={16} />
+            {marketRentEstimate && toNumber(validatedRent) <= 0 ? "Utiliser le loyer estimé" : "Compléter automatiquement"}
+          </button>
+        </section>
+
+        <section className="card novice-progress-card">
+          <div className="novice-progress-title">
+            <strong>Analyse {completionPercent} % complétée</strong>
+            <span>{liveResult.financialReady ? "Prête" : "En cours"}</span>
           </div>
           <div className="analysis-progress-track"><i style={{ width: `${completionPercent}%` }} /></div>
-          <div className="analysis-steps">
+          <div className="novice-checklist">
             <span className={result.price && result.surface ? "done" : ""}>Annonce analysée</span>
             <span className={marketRentEstimate ? "done" : ""}>Loyer estimé</span>
             <span className={toNumber(validatedRent) > 0 ? "done" : ""}>Loyer validé</span>
             <span className={result.propertyType === "house" || String(financialInputs.charges).trim() !== "" ? "done" : ""}>Charges</span>
             <span className={toNumber(financialInputs.propertyTax) > 0 ? "done" : ""}>Taxe foncière</span>
-            <span className={liveResult?.financialReady ? "done" : ""}>Analyse finale</span>
           </div>
         </section>
 
-        <section className={`ai-verdict ${liveResult.verdictTone}`}>
+        {marketRentEstimate && (
+          <section className="card novice-rent-card">
+            <div>
+              <span>LOYER DE MARCHÉ ESTIMÉ</span>
+              <strong>{euro(marketRentEstimate.central)}/mois</strong>
+              <p>Fourchette : {euro(marketRentEstimate.low)} à {euro(marketRentEstimate.high)}/mois</p>
+            </div>
+            <button
+              className={toNumber(validatedRent) === marketRentEstimate.central ? "validated" : ""}
+              onClick={() => setValidatedRent(String(marketRentEstimate.central))}
+            >
+              <Check size={15} />
+              {toNumber(validatedRent) === marketRentEstimate.central ? "Loyer retenu" : "Retenir ce loyer"}
+            </button>
+          </section>
+        )}
+
+        {liveResult.financialReady && (
+          <section className="novice-result-grid">
+            <div><span>Rendement brut</span><strong>{pct(liveResult.grossYield)}</strong></div>
+            <div><span>Rendement net</span><strong>{pct(liveResult.netYield)}</strong></div>
+            <div><span>Cash-flow</span><strong>{euro(liveResult.cashflow)}/mois</strong></div>
+            <div><span>Prix conseillé</span><strong>{liveResult.advisedPrice ? euro(liveResult.advisedPrice) : "—"}</strong></div>
+          </section>
+        )}
+
+        <section className="card novice-actions-card">
           <div>
-            <span>VERDICT RENTA IA</span>
-            <strong>{liveResult.verdict}</strong>
-            <p>
-              {liveResult.verdict === "À COMPLÉTER"
-                ? "Les charges, la taxe foncière ou le loyer manquent : aucun verdict financier fiable n’est affiché."
-                : liveResult.verdict === "ACHETER"
-                ? "Le projet présente un équilibre financier particulièrement intéressant."
-                : liveResult.verdict === "NÉGOCIER"
-                ? "Le projet est pertinent, mais le prix affiché doit être retravaillé."
-                : "Le rendement et les risques identifiés ne compensent pas le prix demandé."}
-            </p>
+            <span>LES 3 ACTIONS PRIORITAIRES</span>
+            <strong>Avant de prendre une décision</strong>
           </div>
-          <div className="ai-score-ring">
-            <strong>{liveResult.score ?? "—"}</strong>{liveResult.score !== null && <small>/100</small>}
-          </div>
+          <ol>
+            <li>{result.propertyType === "house" ? "Vérifier la toiture, l’humidité et l’assainissement." : "Lire les trois derniers procès-verbaux de copropriété."}</li>
+            <li>Confirmer le loyer de marché avec au moins trois annonces comparables.</li>
+            <li>Vérifier la taxe foncière et les charges réelles avant toute offre.</li>
+          </ol>
         </section>
 
-        <div className="analysis-metrics">
-          <Metric label="Prix affiché" value={result.price ? euro(result.price) : "Non renseigné"} note={result.price && result.surface ? `${euro(result.price / result.surface)}/m²` : "Donnée de l’annonce"} icon={<Building2 />} />
-          <Metric label="Loyer dans l’annonce" value={result.rentDetected ? euro(result.estimatedRent) : "Non renseigné"} note="Aucune estimation inventée" icon={<WalletCards />} tone="green" />
-          <Metric label="Rendement brut" value={liveResult.financialReady ? pct(liveResult.grossYield) : "Non calculable"} note={liveResult.financialReady ? `Net : ${pct(liveResult.netYield)}` : "Complétez les données manquantes"} icon={<TrendingUp />} tone="purple" />
-          <Metric label="Cash-flow" value={liveResult.financialReady ? euro(liveResult.cashflow) : "Non calculable"} note={liveResult.financialReady ? `Mensualité : ${euro(liveResult.payment)}` : "Calcul suspendu"} icon={<CircleDollarSign />} tone={liveResult.financialReady && liveResult.cashflow >= 0 ? "green" : "red"} />
-        </div>
+        <button
+          className="advanced-details-toggle"
+          onClick={() => setShowAdvancedDetails(!showAdvancedDetails)}
+        >
+          {showAdvancedDetails ? "Masquer les détails avancés" : "Voir le détail du calcul"}
+          <ChevronRight className={showAdvancedDetails ? "rotated" : ""} size={17} />
+        </button>
 
-        <div className="analysis-layout">
-          <section className="card negotiation-card">
-            <div className="section-title"><span><Target size={18} /> Prix de négociation</span></div>
-            {liveResult.advisedPrice ? (
-              <>
-                <div className="price-comparison">
-                  <div><span>Prix affiché</span><b>{euro(result.price)}</b></div>
-                  <ChevronRight />
-                  <div className="recommended-price"><span>Offre indicative</span><b>{euro(liveResult.advisedPrice)}</b></div>
-                </div>
-                <p>Écart indicatif : <strong>{euro(result.price - liveResult.advisedPrice)}</strong></p>
-              </>
-            ) : (
-              <div className="analysis-unavailable">
-                <AlertTriangle size={18} />
-                <div><b>Impossible à déterminer sérieusement</b><span>Le loyer, les charges et la taxe foncière doivent être renseignés avant de proposer un prix.</span></div>
+        {showAdvancedDetails && (
+          <div className="advanced-analysis-details">
+            <section className="card rent-market-card">
+              <div className="section-title"><span><MapPin size={18} /> Estimation du loyer</span></div>
+              <div className="rent-city-search">
+                <label>
+                  Commune du bien
+                  <span>
+                    <input value={rentCity} onChange={(e) => setRentCity(e.target.value)} placeholder="Ex. Épinay-sur-Orge" />
+                    <button onClick={() => loadOfficialRentReference(result, rentCity)} disabled={!rentCity.trim() || rentSourceStatus === "loading"}>Rechercher</button>
+                  </span>
+                </label>
               </div>
-            )}
-          </section>
-
-          <section className="card extracted-card">
-            <div className="section-title"><span><Search size={18} /> Données réellement détectées</span></div>
-            <div className="extracted-grid trusted-data-grid">
-              <div><span>Type</span><b>{result.propertyLabel}</b><small>Annonce</small></div>
-              <div><span>Surface habitable</span><b>{result.surface ? `${result.surface} m²` : "Non renseignée"}</b><small>{result.surface ? "Annonce" : "Manquante"}</small></div>
-              <div><span>Pièces</span><b>{result.rooms || "Non renseignées"}</b><small>{result.rooms ? "Annonce" : "Manquante"}</small></div>
-              {result.propertyType === "house" && <div><span>Terrain</span><b>{result.landSurface ? `${result.landSurface} m²` : "Non renseigné"}</b><small>{result.landSurface ? "Annonce" : "Manquante"}</small></div>}
-              <div><span>DPE</span><b>{result.dpeDetected ? result.dpe : "Non renseigné"}</b><small>{result.dpeDetected ? "Annonce" : "Manquante"}</small></div>
-              <div><span>Travaux</span><b>{result.worksDetected ? "Mentionnés" : "Aucun travail signalé"}</b><small>Lecture de l’annonce</small></div>
-              <div><span>{result.propertyType === "house" ? "Charges récurrentes" : "Charges de copropriété"}</span><b>{result.chargesDetected ? `${euro(result.monthlyCharges)}/mois` : "Non renseignées"}</b><small>{result.chargesDetected ? "Annonce" : "Manquante"}</small></div>
-              <div><span>Taxe foncière</span><b>{result.propertyTaxDetected ? euro(result.propertyTax) : "Non renseignée"}</b><small>{result.propertyTaxDetected ? "Annonce" : "Manquante"}</small></div>
-              <div><span>Loyer</span><b>{result.rentDetected ? `${euro(result.estimatedRent)}/mois` : "Non renseigné"}</b><small>{result.rentDetected ? "Annonce" : "Manquante"}</small></div>
-            </div>
-          </section>
-        </div>
-
-        <section className="card rent-market-card">
-          <div className="section-title"><span><MapPin size={18} /> Estimation du loyer de marché</span></div>
-          <p className="rent-market-intro">
-            La référence communale est recherchée automatiquement dans la Carte des loyers 2025 publiée par l’ANIL et le ministère du Logement.
-            Elle est ensuite ajustée selon les caractéristiques détectées dans l’annonce.
-          </p>
-
-          <div className="rent-city-search">
-            <label>
-              Commune du bien
-              <span>
-                <input
-                  value={rentCity}
-                  onChange={(event) => setRentCity(event.target.value)}
-                  placeholder="Ex. Épinay-sur-Orge"
-                />
-                <button
-                  onClick={() => loadOfficialRentReference(result, rentCity)}
-                  disabled={!rentCity.trim() || rentSourceStatus === "loading"}
-                >
-                  Rechercher
-                </button>
-              </span>
-            </label>
-            <small>La commune est modifiable si elle n’est pas clairement présente dans l’annonce.</small>
-          </div>
-
-          <div className={`official-rent-source source-${rentSourceStatus}`}>
-            {rentSourceStatus === "loading" && (
-              <><RefreshCw className="source-spinner" size={18} /><div><b>Recherche de la référence officielle…</b><span>{result.city} · {result.propertyLabel}</span></div></>
-            )}
-            {rentSourceStatus === "done" && rentSource && (
-              <>
-                <ShieldCheck size={19} />
-                <div>
-                  <b>{rentSource.rentPerM2} €/m²/mois charges comprises</b>
-                  <span>{rentSource.typologyLabel} · {rentSource.cityLabel || result.city} · données {rentSource.year}</span>
-                  <small>Source : {rentSource.sourceLabel}</small>
-                </div>
-                <a href={rentSource.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Source</a>
-              </>
-            )}
-            {rentSourceStatus === "error" && (
-              <>
-                <AlertTriangle size={18} />
-                <div><b>Référence officielle non récupérée</b><span>{rentSourceError}</span></div>
-                <button onClick={() => loadOfficialRentReference(result, rentCity)}>Réessayer</button>
-              </>
-            )}
-            {rentSourceStatus === "idle" && (
-              <><MapPin size={18} /><div><b>Commune à confirmer</b><span>La ville doit être détectée pour interroger la source officielle.</span></div></>
-            )}
-          </div>
-
-          <details className="manual-rent-fallback">
-            <summary>Saisir une autre référence locale</summary>
-            <div className="sector-rent-input">
-              <label>
-                Référence personnalisée
-                <span>
-                  <input
-                    value={sectorRentPerM2}
-                    onChange={(event) => {
-                      setSectorRentPerM2(event.target.value);
-                      setRentSource(null);
-                    }}
-                    inputMode="decimal"
-                    placeholder="Ex. 18"
-                  />
-                  <b>€/m²/mois</b>
-                </span>
-              </label>
-              <small>Cette valeur remplace la référence officielle et doit être justifiée par des comparables récents.</small>
-            </div>
-          </details>
-
-          {marketRentEstimate ? (
-            <div className="market-rent-result">
-              <div className="market-rent-main">
-                <span>LOYER DE MARCHÉ ESTIMÉ</span>
-                <strong>{euro(marketRentEstimate.central)}<small>/mois</small></strong>
-                <p>Fourchette prudente : {euro(marketRentEstimate.low)} à {euro(marketRentEstimate.high)}/mois</p>
-                <em>Confiance {marketRentEstimate.confidence}</em>
-                <small className="market-source-caption">
-                  {rentSource
-                    ? `Base communale officielle : ${rentSource.rentPerM2} €/m² CC`
-                    : "Base personnalisée renseignée manuellement"}
-                </small>
-                <button
-                  className="validate-rent-button"
-                  onClick={() => setValidatedRent(String(marketRentEstimate.central))}
-                >
-                  <Check size={15} /> Utiliser ce loyer
-                </button>
+              <div className={`official-rent-source source-${rentSourceStatus}`}>
+                {rentSourceStatus === "loading" && <><RefreshCw className="source-spinner" size={18} /><div><b>Recherche de la référence officielle…</b></div></>}
+                {rentSourceStatus === "done" && rentSource && <>
+                  <ShieldCheck size={19} />
+                  <div><b>{rentSource.rentPerM2} €/m²/mois CC</b><span>{rentSource.typologyLabel} · données {rentSource.year}</span><small>{rentSource.sourceLabel}</small></div>
+                  <a href={rentSource.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Source</a>
+                </>}
+                {rentSourceStatus === "error" && <><AlertTriangle size={18} /><div><b>Référence indisponible</b><span>{rentSourceError}</span></div></>}
               </div>
-              <div className="market-rent-factors">
-                <b>Ajustements appliqués</b>
-                {marketRentEstimate.factors.length > 0
-                  ? marketRentEstimate.factors.map((factor) => (
-                      <div key={`${factor.label}-${factor.impact}`}>
-                        <span>{factor.label}</span><strong>{factor.impact}</strong>
-                      </div>
-                    ))
-                  : <p>Aucun ajustement particulier détecté.</p>}
+            </section>
+
+            <section className="card financial-editor-card">
+              <div className="section-title"><span><SlidersHorizontal size={18} /> Affiner les hypothèses</span></div>
+              <div className="financial-input-grid">
+                <label><span>Loyer retenu</span><div><input value={validatedRent} onChange={(e) => setValidatedRent(e.target.value)} inputMode="numeric" /><b>€/mois</b></div></label>
+                {result.propertyType !== "house" && <label><span>Charges</span><div><input value={financialInputs.charges} onChange={(e) => setFinancialInputs({...financialInputs, charges:e.target.value})} inputMode="numeric" /><b>€/mois</b></div></label>}
+                <label><span>Taxe foncière</span><div><input value={financialInputs.propertyTax} onChange={(e) => setFinancialInputs({...financialInputs, propertyTax:e.target.value})} inputMode="numeric" /><b>€/an</b></div></label>
+                <label><span>Apport</span><div><input value={financialInputs.contributionRate} onChange={(e) => setFinancialInputs({...financialInputs, contributionRate:e.target.value})} /><b>%</b></div></label>
+                <label><span>Taux du crédit</span><div><input value={financialInputs.interestRate} onChange={(e) => setFinancialInputs({...financialInputs, interestRate:e.target.value})} /><b>%</b></div></label>
+                <label><span>Durée</span><div><input value={financialInputs.durationYears} onChange={(e) => setFinancialInputs({...financialInputs, durationYears:e.target.value})} /><b>ans</b></div></label>
               </div>
-            </div>
-          ) : (
-            <div className="analysis-unavailable">
-              <MapPin size={18} />
-              <div>
-                <b>Référence sectorielle indisponible</b>
-                <span>La source officielle n’a fourni aucune valeur exploitable. Vous pouvez saisir une référence locale justifiée.</span>
+            </section>
+
+            <section className="card extracted-card">
+              <div className="section-title"><span><Search size={18} /> Données détectées dans l’annonce</span></div>
+              <div className="extracted-grid trusted-data-grid">
+                <div><span>Type</span><b>{result.propertyLabel}</b></div>
+                <div><span>Surface</span><b>{result.surface ? `${result.surface} m²` : "Non renseignée"}</b></div>
+                <div><span>Pièces</span><b>{result.rooms || "Non renseignées"}</b></div>
+                <div><span>DPE</span><b>{result.dpeDetected ? result.dpe : "Non renseigné"}</b></div>
+                <div><span>Charges</span><b>{result.chargesDetected ? `${euro(result.monthlyCharges)}/mois` : "Non renseignées"}</b></div>
+                <div><span>Taxe foncière</span><b>{result.propertyTaxDetected ? euro(result.propertyTax) : "Non renseignée"}</b></div>
               </div>
+            </section>
+
+            <div className="analysis-layout">
+              <section className="card insight-card positive">
+                <div className="section-title"><span><ThumbsUp size={18} /> Points forts</span></div>
+                {result.strengths.map((item) => <div className="insight-line" key={item}><Check size={15} /><span>{item}</span></div>)}
+              </section>
+              <section className="card insight-card warning">
+                <div className="section-title"><span><AlertTriangle size={18} /> Points de vigilance</span></div>
+                {result.weaknesses.map((item) => <div className="insight-line" key={item}><AlertTriangle size={15} /><span>{item}</span></div>)}
+              </section>
             </div>
-          )}
-
-          <p className="rent-estimate-warning">
-            Indicateur communal de loyers d’annonce, charges comprises et non meublés. Il ne constitue ni un loyer garanti ni un comparable exact.
-          </p>
-        </section>
-
-        <section className="card financial-editor-card">
-          <div className="section-title"><span><SlidersHorizontal size={18} /> Hypothèses de l’analyse</span></div>
-          <p>Chaque modification recalcule immédiatement le rendement, le cash-flow, la note et le prix conseillé.</p>
-          <div className="financial-input-grid">
-            <label><span>Loyer retenu</span><div><input value={validatedRent} onChange={(e) => setValidatedRent(e.target.value)} inputMode="numeric" placeholder="Ex. 1 050" /><b>€/mois</b></div></label>
-            {result.propertyType !== "house" && <label><span>Charges de copropriété</span><div><input value={financialInputs.charges} onChange={(e) => setFinancialInputs({...financialInputs, charges:e.target.value})} inputMode="numeric" placeholder="Ex. 105" /><b>€/mois</b></div></label>}
-            <label><span>Taxe foncière</span><div><input value={financialInputs.propertyTax} onChange={(e) => setFinancialInputs({...financialInputs, propertyTax:e.target.value})} inputMode="numeric" placeholder="Ex. 890" /><b>€/an</b></div></label>
-            <label><span>Apport</span><div><input value={financialInputs.contributionRate} onChange={(e) => setFinancialInputs({...financialInputs, contributionRate:e.target.value})} inputMode="decimal" /><b>%</b></div></label>
-            <label><span>Taux du crédit</span><div><input value={financialInputs.interestRate} onChange={(e) => setFinancialInputs({...financialInputs, interestRate:e.target.value})} inputMode="decimal" /><b>%</b></div></label>
-            <label><span>Durée</span><div><input value={financialInputs.durationYears} onChange={(e) => setFinancialInputs({...financialInputs, durationYears:e.target.value})} inputMode="numeric" /><b>ans</b></div></label>
           </div>
-          {liveResult.financialReady
-            ? <div className="recalculated-banner"><CheckCircle2 size={18} /><span>Analyse recalculée avec un loyer validé de <b>{euro(liveResult.estimatedRent)}/mois</b>.</span></div>
-            : <div className="recalculated-banner incomplete"><AlertTriangle size={18} /><span>Renseignez le loyer{result.propertyType !== "house" ? ", les charges" : ""} et la taxe foncière pour activer l’analyse financière.</span></div>}
-        </section>
-
-        <div className="analysis-layout">
-          <section className="card insight-card positive">
-            <div className="section-title"><span><ThumbsUp size={18} /> Points forts</span></div>
-            {result.strengths.map((item) => <div className="insight-line" key={item}><Check size={15} /><span>{item}</span></div>)}
-          </section>
-          <section className="card insight-card warning">
-            <div className="section-title"><span><AlertTriangle size={18} /> Points de vigilance</span></div>
-            {result.weaknesses.map((item) => <div className="insight-line" key={item}><AlertTriangle size={15} /><span>{item}</span></div>)}
-          </section>
-        </div>
-
-        <section className="card ai-advice-card">
-          <div className="ai-advice-icon"><Sparkles size={22} /></div>
-          <div>
-            <span>CONSEIL RENTA IA</span>
-            <p>
-              {result.financialReady
-                ? <>À {euro(result.price)}, le projet affiche un rendement brut calculé à {pct(result.grossYield)}.
-                    L’offre indicative de {euro(liveResult.advisedPrice)} repose uniquement sur les données présentes. </>
-                : <>Le texte ne contient pas assez de données pour donner un rendement, un cash-flow ou un prix d’offre fiable. </>}
-              {result.propertyType === "house"
-                ? "Pour une maison, contrôlez en priorité la toiture, la charpente, le chauffage, l’humidité, l’assainissement, la taxe foncière et le loyer de maisons réellement comparables."
-                : "Pour un appartement, vérifiez le loyer de marché, les procès-verbaux de copropriété, les charges, les travaux votés et la taxe foncière."}
-            </p>
-          </div>
-        </section>
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="page-section announcement-page">
