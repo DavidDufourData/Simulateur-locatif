@@ -533,23 +533,62 @@ function Goals({ projects, isPremium, onPremiumClick }) {
 
 
 function extractListingFields(text) {
-  const normalized = String(text || "").replace(/\u00a0/g, " ");
-  const lower = normalized.toLocaleLowerCase("fr-FR");
+  const normalized = String(text || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\t ]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   const isHouse = /\b(maison|pavillon|villa|long[eè]re|corps de ferme|maison de ville|mitoyenne)\b/i.test(normalized);
   const isApartment = /\b(appartement|studio|duplex|loft|t[1-9]|f[1-9])\b/i.test(normalized);
   const propertyType = isHouse ? "house" : isApartment ? "apartment" : "unknown";
+  const ambiguities = [];
 
-  const priceMatches = [...normalized.matchAll(/(\d{2,3}(?:[\s.]\d{3})+|\d{5,7})\s*€?/g)]
-    .map((match) => toNumber(match[1]))
-    .filter((value) => value >= 30000 && value <= 3000000);
-  const price = priceMatches[0] || 0;
+  const contextAround = (index, radius = 70) => normalized.slice(Math.max(0, index - radius), index + radius);
+  const uniqueNumbers = (values) => [...new Set(values.filter(Boolean))];
 
-  const livingSurfaceMatch =
-    normalized.match(/(?:surface habitable|habitable|surface)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d+)?)\s*m[²2]/i) ||
-    normalized.match(/(\d{2,3}(?:[,.]\d+)?)\s*m[²2]\s*(?:habitables?|hab\.)/i) ||
-    normalized.match(/(\d{2,3}(?:[,.]\d+)?)\s*m[²2]/i);
-  const surface = livingSurfaceMatch ? toNumber(livingSurfaceMatch[1]) : 0;
+  // Prix : on classe les montants selon leur contexte afin de ne pas confondre
+  // prix de vente, honoraires, charges, mensualité ou revenu locatif.
+  const priceCandidates = [...normalized.matchAll(/(\d{2,3}(?:[\s.]\d{3})+|\d{5,7})\s*€?/g)]
+    .map((match) => {
+      const value = toNumber(match[1]);
+      const context = contextAround(match.index, 95).toLocaleLowerCase("fr-FR");
+      let score = 0;
+      if (/prix(?: de vente)?|honoraires inclus|fai|hai|vente|propos[eé] au prix/.test(context)) score += 8;
+      if (/prix au m[²2]|\/m[²2]|par m[²2]/.test(context)) score -= 10;
+      if (/charges|taxe|loyer|mensualit[eé]|revenu|budget travaux|honoraires.*(?:charge|agence)/.test(context)) score -= 7;
+      if (/t[eé]l[eé]phone|r[eé]f[eé]rence|mandat|code postal/.test(context)) score -= 6;
+      if (value >= 30000 && value <= 3000000) score += 2;
+      return { value, score, index: match.index, context };
+    })
+    .filter((item) => item.value >= 30000 && item.value <= 3000000)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  const price = priceCandidates[0]?.value || 0;
+  const distinctPrices = uniqueNumbers(priceCandidates.filter((item) => item.score >= 2).map((item) => item.value));
+  if (distinctPrices.length > 1 && Math.abs(distinctPrices[0] - distinctPrices[1]) > 1000) {
+    ambiguities.push({ field: "price", label: "Prix", candidates: distinctPrices.slice(0, 3), selected: price });
+  }
+
+  // Surface : priorité à la surface habitable / Carrez, pénalité pour terrain,
+  // balcon, cave, garage et dépendances.
+  const surfaceCandidates = [...normalized.matchAll(/(\d{1,5}(?:[,.]\d+)?)\s*m[²2]/gi)]
+    .map((match) => {
+      const value = toNumber(match[1]);
+      const context = contextAround(match.index, 65).toLocaleLowerCase("fr-FR");
+      let score = 0;
+      if (/surface habitable|habitables?|loi carrez|carrez|surface privative/.test(context)) score += 10;
+      if (/appartement|maison|studio|t[1-9]|f[1-9]/.test(context)) score += 3;
+      if (/terrain|parcelle|jardin|balcon|terrasse|cave|garage|box|d[eé]pendance|cour/.test(context)) score -= 9;
+      if (value >= 9 && value <= 400) score += 2;
+      return { value, score, index: match.index };
+    })
+    .filter((item) => item.value >= 9 && item.value <= 10000)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  const surface = surfaceCandidates.find((item) => item.value <= 400)?.value || 0;
+  const plausibleSurfaces = uniqueNumbers(surfaceCandidates.filter((item) => item.score >= 2 && item.value <= 400).map((item) => item.value));
+  if (plausibleSurfaces.length > 1 && Math.abs(plausibleSurfaces[0] - plausibleSurfaces[1]) >= 5) {
+    ambiguities.push({ field: "surface", label: "Surface", candidates: plausibleSurfaces.slice(0, 3), selected: surface });
+  }
 
   const landMatch =
     normalized.match(/(?:terrain|parcelle|jardin)\s*(?:de|:)?\s*(\d{2,5}(?:[,.]\d+)?)\s*m[²2]/i) ||
@@ -557,7 +596,7 @@ function extractListingFields(text) {
   const landSurface = landMatch ? toNumber(landMatch[1]) : 0;
 
   const rentMatch =
-    normalized.match(/loyer(?:\s+(?:estimé|mensuel|actuel|hors charges))?\s*[:\-]?\s*(\d{3,5})\s*€/i) ||
+    normalized.match(/loyer(?:\s+(?:estimé|mensuel|actuel|hors charges|charges comprises))?\s*[:\-]?\s*(\d{3,5})\s*€/i) ||
     normalized.match(/lou[ée]\s*(?:à)?\s*(\d{3,5})\s*€/i);
   const estimatedRent = rentMatch ? toNumber(rentMatch[1]) : 0;
 
@@ -570,25 +609,27 @@ function extractListingFields(text) {
   const taxMatch = normalized.match(/taxe fonci[eè]re\s*[:\-]?\s*(\d{2,5})\s*€/i);
   const propertyTax = taxMatch ? toNumber(taxMatch[1]) : 0;
 
-  const roomMatch =
-    normalized.match(/(?:t|f)\s?(\d{1,2})\b/i) ||
-    normalized.match(/(\d{1,2})\s*pi[eè]ces?\b/i);
+  const roomMatch = normalized.match(/(?:t|f)\s?(\d{1,2})\b/i) || normalized.match(/(\d{1,2})\s*pi[eè]ces?\b/i);
   const rooms = roomMatch ? Number(roomMatch[1]) : 0;
-
   const bedroomMatch = normalized.match(/(\d{1,2})\s*chambres?\b/i);
   const bedrooms = bedroomMatch ? Number(bedroomMatch[1]) : 0;
 
-  const cityPatterns = [
-    /(?:à|sur la commune de|situ[ée]\s+à)\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ' -]{2,35})/i,
-    /([A-ZÀ-Ÿ][A-Za-zÀ-ÿ' -]{2,35})\s+\(\d{5}\)/
-  ];
-  let city = "Ville à confirmer";
-  for (const pattern of cityPatterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      city = match[1].trim().replace(/\s+(proche|dans|avec|au|en)$/i, "");
-      break;
-    }
+  const cityCandidates = [];
+  const addCity = (value, score) => {
+    const city = String(value || "").trim().replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, "");
+    if (!city || city.length < 2 || city.length > 45) return;
+    if (/^(france|agence|immobilier|exclusivit[eé]|secteur|centre|ville|proche)$/i.test(city)) return;
+    cityCandidates.push({ value: city, score });
+  };
+  for (const match of normalized.matchAll(/\b\d{5}\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ' -]{1,40})/g)) addCity(match[1].split(/\n|\.|,/)[0], 10);
+  for (const match of normalized.matchAll(/(?:situ[ée]e?\s+à|sur la commune de|bien situ[ée]\s+à|à)\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ' -]{2,40})/gi)) {
+    addCity(match[1].split(/\n|\.|,|\s+(?:proche|dans|avec|au|en)\b/i)[0], 5);
+  }
+  cityCandidates.sort((a, b) => b.score - a.score);
+  const city = cityCandidates[0]?.value || "Ville à confirmer";
+  const distinctCities = [...new Set(cityCandidates.map((item) => item.value.toLocaleLowerCase("fr-FR")))];
+  if (distinctCities.length > 1) {
+    ambiguities.push({ field: "city", label: "Ville", candidates: cityCandidates.slice(0, 3).map((item) => item.value), selected: city });
   }
 
   const hasWorks = /(travaux|à rénover|rafraîchir|rénovation|électricité à refaire|toiture à refaire|assainissement à refaire)/i.test(normalized);
@@ -599,7 +640,6 @@ function extractListingFields(text) {
   const rented = /(vendu loué|locataire en place|actuellement loué)/i.test(normalized);
   const dpeMatch = normalized.match(/dpe\s*[:\-]?\s*([a-g])/i);
   const dpe = dpeMatch ? dpeMatch[1].toUpperCase() : "NC";
-
   const hasCopro = /(copropri[eé]t[eé]|syndic|charges de copro|lotissement avec charges)/i.test(normalized);
   const roofMentioned = /(toiture|couverture|charpente)/i.test(normalized);
   const roofConcern = /(toiture à refaire|toiture ancienne|charpente à reprendre|infiltration)/i.test(normalized);
@@ -624,12 +664,9 @@ function extractListingFields(text) {
     rooms, bedrooms, city, dpe, hasWorks, isRenovated, hasElevator, hasParking,
     hasOutdoor, rented, hasCopro, roofMentioned, roofConcern, heatingMentioned,
     sanitationMentioned, septicTank, facadeConcern, isDetached, isSemiDetached,
-    hasOutbuilding, missing,
-    rentDetected: Boolean(rentMatch),
-    chargesDetected: Boolean(chargesMatch),
-    propertyTaxDetected: Boolean(taxMatch),
-    dpeDetected: Boolean(dpeMatch),
-    worksDetected: hasWorks
+    hasOutbuilding, missing, ambiguities,
+    rentDetected: Boolean(rentMatch), chargesDetected: Boolean(chargesMatch),
+    propertyTaxDetected: Boolean(taxMatch), dpeDetected: Boolean(dpeMatch), worksDetected: hasWorks
   };
 }
 
@@ -637,41 +674,34 @@ function normalizeAiFields(raw, fallbackText) {
   const local = extractListingFields(fallbackText);
   const type = ["house", "apartment"].includes(raw?.propertyType) ? raw.propertyType : local.propertyType;
   const bool = (key) => typeof raw?.[key] === "boolean" ? raw[key] : local[key];
+  const numeric = (key, min, max) => {
+    const value = toNumber(raw?.[key]);
+    return value >= min && value <= max ? value : local[key];
+  };
+  const aiCity = typeof raw?.city === "string" && raw.city.trim().length >= 2 ? raw.city.trim() : "";
+  const aiDpe = /^[A-G]$/i.test(String(raw?.dpe || "")) ? String(raw.dpe).toUpperCase() : "";
 
   return {
     propertyType: type,
-    price: local.price,
-    surface: local.surface,
-    landSurface: local.landSurface,
-    estimatedRent: local.estimatedRent,
-    monthlyCharges: local.monthlyCharges,
-    propertyTax: local.propertyTax,
-    rooms: local.rooms,
-    bedrooms: local.bedrooms,
-    city: local.city,
-    dpe: local.dpe,
-    hasWorks: bool("hasWorks"),
-    isRenovated: bool("isRenovated"),
-    hasElevator: bool("hasElevator"),
-    hasParking: bool("hasParking"),
-    hasOutdoor: bool("hasOutdoor"),
-    rented: bool("rented"),
-    hasCopro: bool("hasCopro"),
-    roofMentioned: bool("roofMentioned"),
-    roofConcern: bool("roofConcern"),
-    heatingMentioned: bool("heatingMentioned"),
-    sanitationMentioned: bool("sanitationMentioned"),
-    septicTank: bool("septicTank"),
-    facadeConcern: bool("facadeConcern"),
-    isDetached: bool("isDetached"),
-    isSemiDetached: bool("isSemiDetached"),
-    hasOutbuilding: bool("hasOutbuilding"),
-    missing: local.missing,
-    rentDetected: local.rentDetected,
-    chargesDetected: local.chargesDetected,
-    propertyTaxDetected: local.propertyTaxDetected,
-    dpeDetected: local.dpeDetected,
-    worksDetected: local.worksDetected
+    price: numeric("price", 30000, 3000000),
+    surface: numeric("surface", 9, 400),
+    landSurface: numeric("landSurface", 0, 100000),
+    estimatedRent: numeric("estimatedRent", 0, 20000),
+    monthlyCharges: numeric("monthlyCharges", 0, 10000),
+    propertyTax: numeric("propertyTax", 0, 50000),
+    rooms: numeric("rooms", 0, 30), bedrooms: numeric("bedrooms", 0, 30),
+    city: aiCity || local.city, dpe: aiDpe || local.dpe,
+    hasWorks: bool("hasWorks"), isRenovated: bool("isRenovated"), hasElevator: bool("hasElevator"),
+    hasParking: bool("hasParking"), hasOutdoor: bool("hasOutdoor"), rented: bool("rented"),
+    hasCopro: bool("hasCopro"), roofMentioned: bool("roofMentioned"), roofConcern: bool("roofConcern"),
+    heatingMentioned: bool("heatingMentioned"), sanitationMentioned: bool("sanitationMentioned"),
+    septicTank: bool("septicTank"), facadeConcern: bool("facadeConcern"), isDetached: bool("isDetached"),
+    isSemiDetached: bool("isSemiDetached"), hasOutbuilding: bool("hasOutbuilding"),
+    missing: local.missing, ambiguities: local.ambiguities,
+    rentDetected: Boolean(raw?.rentDetected ?? local.rentDetected),
+    chargesDetected: Boolean(raw?.chargesDetected ?? local.chargesDetected),
+    propertyTaxDetected: Boolean(raw?.propertyTaxDetected ?? local.propertyTaxDetected),
+    dpeDetected: Boolean(aiDpe || local.dpeDetected), worksDetected: bool("hasWorks")
   };
 }
 
@@ -681,7 +711,7 @@ function computeListingAnalysis(fields) {
     rooms, bedrooms, city, dpe, hasWorks, isRenovated, hasParking, hasOutdoor, rented,
     hasCopro, roofMentioned, roofConcern, heatingMentioned, sanitationMentioned,
     septicTank, facadeConcern, isDetached, isSemiDetached, hasOutbuilding, missing,
-    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected
+    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected, ambiguities = []
   } = fields;
 
   const isHouse = propertyType === "house";
@@ -821,7 +851,7 @@ function computeListingAnalysis(fields) {
     city, dpe, worksEstimate, grossYield, netYield, cashflow, score, advisedPrice,
     strengths: strengths.slice(0, 5), weaknesses: weaknesses.slice(0, 5),
     verdict, verdictTone, confidence, missing, usableFinancialData, financialReady,
-    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected,
+    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected, ambiguities,
     hasParking, hasOutdoor, hasCopro, isRenovated
   };
 }
@@ -931,6 +961,7 @@ function recalculateFinancialAnalysis(result, overrides) {
   const contributionRate = clamp(toNumber(overrides.contributionRate) || 10, 0, 100) / 100;
   const interestRate = Math.max(0, toNumber(overrides.interestRate) || 3.2) / 100;
   const durationYears = clamp(toNumber(overrides.durationYears) || 25, 5, 30);
+  const insuranceRate = Math.max(0, toNumber(overrides.insuranceRate) || 0.30) / 100;
 
   const rentReady = hasRent && rent > 0;
   const chargesReady = result.propertyType === "house" || hasCharges;
@@ -955,11 +986,13 @@ function recalculateFinancialAnalysis(result, overrides) {
   const principal = Math.max(0, acquisitionCost - contribution);
   const months = durationYears * 12;
   const monthlyRate = interestRate / 12;
-  const payment = principal > 0
+  const loanPayment = principal > 0
     ? monthlyRate > 0
       ? principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))
       : principal / months
     : 0;
+  const insurancePayment = principal * insuranceRate / 12;
+  const payment = loanPayment + insurancePayment;
   const cashflow = financialReady ? (yearlyRent - yearlyCharges) / 12 - payment : null;
 
   let score = null;
@@ -991,14 +1024,14 @@ function recalculateFinancialAnalysis(result, overrides) {
     grossYield,
     netYield,
     cashflow,
-    payment,
+    payment, loanPayment, insurancePayment,
     score,
     advisedPrice,
     verdict,
     verdictTone,
     contributionRate: contributionRate * 100,
     interestRate: interestRate * 100,
-    durationYears
+    durationYears, insuranceRate: insuranceRate * 100
   };
 }
 
@@ -1019,7 +1052,8 @@ function AnnouncementAnalysis({ onExport }) {
     propertyTax: "",
     contributionRate: "10",
     interestRate: "3,2",
-    durationYears: "25"
+    durationYears: "25",
+    insuranceRate: "0,30"
   });
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const [checkedActions, setCheckedActions] = useState({});
@@ -1092,7 +1126,8 @@ Loyer estimé : 1 650 € par mois.`;
       propertyTax: analysis.propertyTaxDetected ? String(analysis.propertyTax) : "",
       contributionRate: "10",
       interestRate: "3,2",
-      durationYears: "25"
+      durationYears: "25",
+      insuranceRate: "0,30"
     });
     setStatus("done");
     const detectedCity = analysis.city === "Ville à confirmer" ? "" : analysis.city;
@@ -1116,7 +1151,8 @@ Loyer estimé : 1 650 € par mois.`;
       propertyTax: "",
       contributionRate: "10",
       interestRate: "3,2",
-      durationYears: "25"
+      durationYears: "25",
+      insuranceRate: "0,30"
     });
     setShowAdvancedDetails(false);
     setCheckedActions({});
@@ -1134,9 +1170,28 @@ Loyer estimé : 1 650 € par mois.`;
         propertyTax: financialInputs.propertyTax,
         contributionRate: financialInputs.contributionRate,
         interestRate: financialInputs.interestRate,
-        durationYears: financialInputs.durationYears
+        durationYears: financialInputs.durationYears,
+        insuranceRate: financialInputs.insuranceRate
       })
     : null;
+
+  const applyAmbiguityChoice = (ambiguity, choice) => {
+    setResult((current) => {
+      if (!current) return current;
+      const next = {
+        ...current,
+        [ambiguity.field]: ambiguity.field === "city" ? String(choice) : toNumber(choice),
+        ambiguities: (current.ambiguities || []).filter((item) => item.field !== ambiguity.field)
+      };
+      return next;
+    });
+    if (ambiguity.field === "city") {
+      setRentCity(String(choice));
+      setRentSource(null);
+      setRentSourceStatus("idle");
+      setSectorRentPerM2("");
+    }
+  };
 
   const completedSteps = result ? [
     Boolean(result.price && result.surface),
@@ -1311,6 +1366,35 @@ Loyer estimé : 1 650 € par mois.`;
           </div>
         </div>
 
+        {result.ambiguities?.length > 0 && (
+          <section className="card extraction-check-card">
+            <AlertTriangle size={19} />
+            <div className="extraction-check-content">
+              <strong>Vérification rapide</strong>
+              <span>L’annonce contient plusieurs valeurs possibles. Touchez simplement la bonne.</span>
+              <div className="ambiguity-list">
+                {result.ambiguities.map((ambiguity) => (
+                  <div className="ambiguity-row" key={ambiguity.field}>
+                    <b>{ambiguity.label}</b>
+                    <div>
+                      {ambiguity.candidates.map((candidate) => (
+                        <button
+                          type="button"
+                          key={String(candidate)}
+                          className={String(candidate) === String(ambiguity.selected) ? "selected" : ""}
+                          onClick={() => applyAmbiguityChoice(ambiguity, candidate)}
+                        >
+                          {ambiguity.field === "price" ? euro(candidate) : ambiguity.field === "surface" ? `${candidate} m²` : candidate}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className={`novice-verdict-card ${liveResult.verdictTone}`}>
           <div className="novice-verdict-copy">
             <span>VERDICT ACTUEL</span>
@@ -1384,6 +1468,7 @@ Loyer estimé : 1 650 € par mois.`;
           <section className="novice-result-grid">
             <div><span>Rendement brut</span><strong>{pct(liveResult.grossYield)}</strong></div>
             <div><span>Rendement net</span><strong>{pct(liveResult.netYield)}</strong></div>
+            <div className="monthly-payment-kpi"><span>Mensualité estimée</span><strong>{euro(liveResult.payment)}/mois</strong><small>Crédit + assurance</small></div>
             <div><span>Cash-flow</span><strong>{euro(liveResult.cashflow)}/mois</strong></div>
             <div><span>Prix conseillé</span><strong>{liveResult.advisedPrice ? euro(liveResult.advisedPrice) : "—"}</strong></div>
           </section>
@@ -1522,12 +1607,15 @@ Loyer estimé : 1 650 € par mois.`;
                 <label><span>Apport</span><div><input value={financialInputs.contributionRate} onChange={(e) => setFinancialInputs({...financialInputs, contributionRate:e.target.value})} /><b>%</b></div></label>
                 <label><span>Taux du crédit</span><div><input value={financialInputs.interestRate} onChange={(e) => setFinancialInputs({...financialInputs, interestRate:e.target.value})} /><b>%</b></div></label>
                 <label><span>Durée</span><div><input value={financialInputs.durationYears} onChange={(e) => setFinancialInputs({...financialInputs, durationYears:e.target.value})} /><b>ans</b></div></label>
+                <label><span>Assurance emprunteur</span><div><input value={financialInputs.insuranceRate} onChange={(e) => setFinancialInputs({...financialInputs, insuranceRate:e.target.value})} /><b>%/an</b></div></label>
               </div>
             </section>
 
             <section className="card extracted-card">
               <div className="section-title"><span><Search size={18} /> Données détectées dans l’annonce</span></div>
               <div className="extracted-grid trusted-data-grid">
+                <div><span>Prix</span><b>{result.price ? euro(result.price) : "Non renseigné"}</b></div>
+                <div><span>Ville</span><b>{result.city}</b></div>
                 <div><span>Type</span><b>{result.propertyLabel}</b></div>
                 <div><span>Surface</span><b>{result.surface ? `${result.surface} m²` : "Non renseignée"}</b></div>
                 <div><span>Pièces</span><b>{result.rooms || "Non renseignées"}</b></div>

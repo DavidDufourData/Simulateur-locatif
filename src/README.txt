@@ -1,50 +1,35 @@
-RENTA LOCATIVE V25 — ASSISTANT D’ACQUISITION
+RENTA LOCATIVE V25.1 — CONFORT & FIABILITÉ
 
-Cette version ajoute une vraie checklist interactive avant achat.
+Base conservée : V25 Assistant d’acquisition.
+Aucune refonte lourde ni nouvel onglet.
 
-NOUVEAUTÉS
+CORRECTIONS
 
-1. Actions prioritaires interactives
-Chaque action affiche :
-- son niveau d’impact ;
-- pourquoi elle est importante ;
-- comment la vérifier ;
-- un bouton « J’ai vérifié ».
+1. Mensualité du crédit visible
+- ajout dans les résultats principaux ;
+- calcul crédit + assurance emprunteur ;
+- intégration de la mensualité totale dans le cash-flow ;
+- détail de l’assurance modifiable dans les hypothèses avancées.
 
-2. Explications adaptées au type de bien
-Pour un appartement :
-- procès-verbaux de copropriété ;
-- loyer de marché ;
-- taxe foncière et charges.
+2. Copier-coller plus fiable
+- sélection contextuelle du prix de vente ;
+- distinction entre surface habitable, terrain, balcon, cave et garage ;
+- meilleure détection de la commune ;
+- exclusion renforcée des montants parasites : charges, taxe, loyer, mensualité, prix au m² ;
+- utilisation des valeurs IA lorsqu’elles sont plausibles, avec repli local.
 
-Pour une maison :
-- toiture, humidité et assainissement ;
-- loyer de marché ;
-- taxe foncière et coûts d’entretien.
+3. Vérification uniquement en cas d’ambiguïté
+- aucune étape supplémentaire si les données sont cohérentes ;
+- si plusieurs prix, surfaces ou villes sont possibles, une carte compacte apparaît ;
+- l’utilisateur touche simplement la bonne valeur.
 
-3. Progression du dossier
-Une barre indique le pourcentage de vérifications réalisées.
-
-4. Badge final
-Lorsque :
-- les trois contrôles sont cochés ;
-- l’analyse financière est complète ;
-
-le badge « Dossier prêt pour une offre » apparaît.
-
-5. Rapport
-Le bouton de génération du rapport apparaît lorsque le dossier est prêt.
-
-6. Refonte novice conservée
-- synthèse simple ;
-- détails avancés masqués ;
-- estimation du loyer ;
-- recalcul instantané ;
-- effacement rapide du texte collé.
+4. Interface V25 conservée
+- même navigation ;
+- même assistant d’acquisition ;
+- mêmes estimations de loyer ;
+- aucun écran ni onglet supplémentaire.
 
 FICHIERS MODIFIÉS
 - App.jsx
 - styles.css
-
-API CONSERVÉE
-- api/rent-reference.js
+- README.txt
