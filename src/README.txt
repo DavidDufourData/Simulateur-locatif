@@ -1,22 +1,15 @@
-RENTA LOCATIVE V13 — RADAR PLUS AÉRÉ
+RENTA LOCATIVE V14 — RADAR COHÉRENT
+
+Corrections :
+- « Voir l’impact » devient « Voir l’analyse ».
+- Le bouton mène désormais à une vraie analyse du projet actif.
+- La carte vide « Étude de cas personnalisée » est remplacée par :
+  score, rentabilité nette, cash-flow et commentaire contextualisé.
+- Les sources sont affichées sous forme de badges plus visibles.
+- Les balises HTML visibles comme <p> ou <em> sont nettoyées côté API.
+- La mise en page mobile est conservée.
 
 À remplacer :
 - App.jsx
 - styles.css
 - api/investor-radar.js
-
-Le branchement des sources de la V12 est conservé.
-
-AMÉLIORATIONS VISUELLES
-- une actualité principale mise en avant ;
-- seulement deux cartes secondaires ;
-- les autres actualités sous forme de liste compacte dépliable ;
-- bouton « Voir toutes les actualités » ;
-- indicateurs défilables horizontalement sur mobile ;
-- section personnalisée plus courte ;
-- détails Impact / Action masqués jusqu’au clic ;
-- académie et étude de cas regroupées en bas ;
-- textes raccourcis visuellement sur mobile ;
-- couleurs différentes selon la catégorie.
-
-L’objectif est d’éviter le mur de texte tout en conservant l’intégralité des informations et des sources.

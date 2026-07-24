@@ -1233,8 +1233,8 @@ function InvestorRadar({ projects }) {
               Score {activeCalc.score}/100 · Cash-flow estimé {activeCalc.monthlyCashflow >= 0 ? "positif" : "négatif"} de {euro(Math.abs(activeCalc.monthlyCashflow))}/mois.
             </p>
           </div>
-          <button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}>
-            Voir l’impact <ChevronRight size={16} />
+          <button onClick={() => document.getElementById("radar-project-impact")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
+            Voir l’analyse <ChevronRight size={16} />
           </button>
         </section>
       )}
@@ -1259,7 +1259,7 @@ function InvestorRadar({ projects }) {
                   Lire la source <ExternalLink size={14} />
                 </a>
               )}
-              <small>{featured.sourceName}{featured.sourceDate ? ` · ${featured.sourceDate}` : ""}</small>
+              <small className="radar-source-badge"><ShieldCheck size={13} /> {featured.sourceName}{featured.sourceDate ? ` · ${featured.sourceDate}` : ""}</small>
             </div>
           </div>
           <div className="radar-featured-visual">
@@ -1296,7 +1296,7 @@ function InvestorRadar({ projects }) {
                 </div>
               </details>
               <footer>
-                <span>{item.sourceName}{item.sourceDate ? ` · ${item.sourceDate}` : ""}</span>
+                <span className="radar-source-badge"><ShieldCheck size={12} /> {item.sourceName}{item.sourceDate ? ` · ${item.sourceDate}` : ""}</span>
                 {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a>}
               </footer>
             </article>
@@ -1347,12 +1347,34 @@ function InvestorRadar({ projects }) {
           </div>
         </section>
 
-        <section className="card radar-case radar-case-v13">
-          <div className="section-title"><span><Landmark size={18} /> Projet analysé</span></div>
-          <span><MapPin size={14} /> {data.caseStudy.city}</span>
-          <h3>{data.caseStudy.title}</h3>
-          <p>{data.caseStudy.summary}</p>
-          <small>{data.caseStudy.action}</small>
+        <section id="radar-project-impact" className="card radar-case radar-case-v13 radar-project-analysis">
+          <div className="section-title"><span><Landmark size={18} /> Analyse de votre projet</span></div>
+          {activeProject && activeCalc ? (
+            <>
+              <span><MapPin size={14} /> {activeProject.city || "Ville non renseignée"}</span>
+              <h3>{activeProject.name}</h3>
+              <div className="radar-project-scoreline">
+                <strong>{activeCalc.score}/100</strong>
+                <span>{activeCalc.score >= 80 ? "Projet très solide" : activeCalc.score >= 65 ? "Projet équilibré" : "Projet à optimiser"}</span>
+              </div>
+              <div className="radar-project-facts">
+                <div><small>Rentabilité nette</small><b>{pct(activeCalc.netYield)}</b></div>
+                <div><small>Cash-flow mensuel</small><b>{euro(activeCalc.monthlyCashflow)}</b></div>
+              </div>
+              <p>
+                {activeCalc.monthlyCashflow >= 0
+                  ? "Le projet conserve un cash-flow positif dans les hypothèses enregistrées. Les actualités de crédit, de fiscalité et de location peuvent toutefois modifier ce résultat."
+                  : "Le projet présente actuellement un effort d’épargne mensuel. Une évolution du financement, du loyer ou des charges peut modifier cet équilibre."}
+              </p>
+              <small>Analyse calculée à partir de vos données enregistrées, avant fiscalité définitive.</small>
+            </>
+          ) : (
+            <>
+              <span><MapPin size={14} /> Aucun projet</span>
+              <h3>Ajoutez un projet à analyser</h3>
+              <p>Cette section affichera ensuite son score, sa rentabilité et son cash-flow.</p>
+            </>
+          )}
         </section>
       </div>
 

@@ -887,3 +887,81 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
   .radar-featured-impact{padding:12px}
   .radar-story-head{align-items:flex-start}
 }
+
+
+/* V14 — cohérence du projet et meilleure lisibilité des sources */
+.radar-source-badge{
+  display:inline-flex !important;
+  align-items:center;
+  gap:6px;
+  width:max-content;
+  padding:6px 9px;
+  border-radius:999px;
+  background:rgba(255,255,255,.07);
+  border:1px solid var(--line);
+  color:var(--ink) !important;
+  font-size:12px !important;
+  font-weight:700;
+  line-height:1;
+}
+.radar-featured-actions .radar-source-badge{
+  background:var(--card-soft);
+}
+.radar-story-card footer .radar-source-badge{
+  color:var(--muted) !important;
+}
+.radar-project-analysis{
+  scroll-margin-top:110px;
+}
+.radar-project-scoreline{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin:12px 0;
+}
+.radar-project-scoreline strong{
+  font-size:34px;
+}
+.radar-project-scoreline span{
+  color:var(--muted);
+  font-weight:700;
+}
+.radar-project-facts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.radar-project-facts>div{
+  padding:12px;
+  border-radius:13px;
+  background:var(--card-soft);
+  border:1px solid var(--line);
+}
+.radar-project-facts small{
+  display:block;
+  margin-bottom:5px;
+  color:var(--muted);
+}
+.radar-project-facts b{
+  font-size:17px;
+}
+.radar-featured>div>p,
+.radar-story-card>p{
+  word-break:normal;
+  overflow-wrap:anywhere;
+}
+@media(max-width:780px){
+  .radar-source-badge{
+    font-size:11px !important;
+    padding:6px 8px;
+  }
+  .radar-project-facts{
+    grid-template-columns:1fr;
+  }
+  .radar-project-scoreline{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:2px;
+  }
+}
