@@ -1420,3 +1420,32 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
 @media(max-width:780px){
   .trusted-data-grid small{font-size:8px}
 }
+
+
+/* V20 — estimation locative transparente par référence sectorielle */
+.rent-market-card{display:grid;gap:16px}
+.rent-market-intro{margin:-4px 0 0;color:var(--muted);font-size:13px;line-height:1.55}
+.sector-rent-input{display:grid;gap:7px;max-width:430px}
+.sector-rent-input label{display:grid;gap:7px;color:var(--ink);font-size:12px;font-weight:700}
+.sector-rent-input label>span{display:flex;align-items:center;border:1px solid var(--line);border-radius:13px;background:var(--card-soft);overflow:hidden}
+.sector-rent-input input{min-width:0;flex:1;padding:12px 13px;border:0;background:transparent;color:var(--ink);font-size:16px;font-weight:700;outline:none}
+.sector-rent-input label b{padding:0 13px;color:var(--muted);font-size:12px}
+.sector-rent-input small{color:var(--muted);font-size:11px;line-height:1.45}
+.market-rent-result{display:grid;grid-template-columns:minmax(0,.8fr) minmax(280px,1.2fr);gap:14px}
+.market-rent-main,.market-rent-factors{padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--card-soft)}
+.market-rent-main>span{display:block;color:var(--blue);font-size:10px;font-weight:800;letter-spacing:.08em}
+.market-rent-main strong{display:block;margin:9px 0 5px;font-size:34px}
+.market-rent-main strong small{margin-left:4px;color:var(--muted);font-size:13px}
+.market-rent-main p{margin:0;color:var(--muted);font-size:12px}
+.market-rent-main em{display:inline-flex;margin-top:12px;padding:5px 8px;border-radius:999px;background:rgba(49,111,245,.1);color:var(--blue);font-size:10px;font-style:normal;font-weight:800}
+.market-rent-factors>b{display:block;margin-bottom:10px;font-size:12px}
+.market-rent-factors>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
+.market-rent-factors>div:last-child{border-bottom:0}
+.market-rent-factors span{color:var(--muted)}
+.market-rent-factors strong{white-space:nowrap}
+.rent-estimate-warning{margin:0;color:var(--muted);font-size:10px;line-height:1.45}
+@media(max-width:780px){
+  .market-rent-result{grid-template-columns:1fr}
+  .sector-rent-input{max-width:none}
+  .market-rent-main strong{font-size:30px}
+}

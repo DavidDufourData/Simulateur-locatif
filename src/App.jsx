@@ -858,12 +858,73 @@ function isStandaloneUrl(value) {
   return /^https?:\/\/\S+$/i.test(String(value || "").trim());
 }
 
+
+function estimateRentFromSector(result, sectorRentPerM2) {
+  const base = toNumber(sectorRentPerM2);
+  if (!result || !result.surface || !base) return null;
+
+  let adjustment = 0;
+  const factors = [];
+
+  if (result.isRenovated) {
+    adjustment += 0.06;
+    factors.push({ label: "Bien rénové", impact: "+6 %" });
+  }
+  if (result.hasParking) {
+    adjustment += result.propertyType === "house" ? 0.025 : 0.04;
+    factors.push({ label: "Parking ou garage", impact: result.propertyType === "house" ? "+2,5 %" : "+4 %" });
+  }
+  if (result.hasOutdoor) {
+    adjustment += result.propertyType === "house" ? 0.035 : 0.04;
+    factors.push({ label: result.propertyType === "house" ? "Jardin, terrain ou cour" : "Balcon ou terrasse", impact: result.propertyType === "house" ? "+3,5 %" : "+4 %" });
+  }
+  if (result.dpeDetected && ["A", "B", "C"].includes(result.dpe)) {
+    adjustment += 0.025;
+    factors.push({ label: `DPE ${result.dpe}`, impact: "+2,5 %" });
+  }
+  if (result.dpeDetected && ["F", "G"].includes(result.dpe)) {
+    adjustment -= 0.06;
+    factors.push({ label: `DPE ${result.dpe}`, impact: "-6 %" });
+  }
+  if (result.worksDetected) {
+    adjustment -= 0.08;
+    factors.push({ label: "Travaux signalés", impact: "-8 %" });
+  }
+  if (result.propertyType === "apartment" && result.hasCopro) {
+    factors.push({ label: "Copropriété identifiée", impact: "neutre" });
+  }
+
+  // Effet de volume : le prix au m² baisse généralement sur les grandes surfaces.
+  if (result.surface >= 90) {
+    adjustment -= 0.08;
+    factors.push({ label: "Grande surface", impact: "-8 % sur le €/m²" });
+  } else if (result.surface >= 70) {
+    adjustment -= 0.045;
+    factors.push({ label: "Surface familiale", impact: "-4,5 % sur le €/m²" });
+  } else if (result.surface <= 30) {
+    adjustment += 0.08;
+    factors.push({ label: "Petite surface", impact: "+8 % sur le €/m²" });
+  }
+
+  adjustment = clamp(adjustment, -0.18, 0.18);
+  const central = Math.round(result.surface * base * (1 + adjustment) / 10) * 10;
+  const low = Math.round(central * 0.94 / 10) * 10;
+  const high = Math.round(central * 1.06 / 10) * 10;
+  const confidence =
+    result.city !== "Ville à confirmer" && result.surface && result.propertyType !== "unknown"
+      ? (factors.length >= 3 ? "moyenne" : "prudente")
+      : "faible";
+
+  return { base, adjustment, central, low, high, confidence, factors };
+}
+
 function AnnouncementAnalysis({ onExport }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle");
   const [result, setResult] = useState(null);
   const [usedAI, setUsedAI] = useState(false);
   const [error, setError] = useState("");
+  const [sectorRentPerM2, setSectorRentPerM2] = useState("");
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -902,7 +963,12 @@ Loyer estimé : 1 650 € par mois.`;
     setResult(null);
     setStatus("idle");
     setError("");
+    setSectorRentPerM2("");
   };
+
+  const marketRentEstimate = result
+    ? estimateRentFromSector(result, sectorRentPerM2)
+    : null;
 
   if (status === "loading") {
     return (
@@ -1007,6 +1073,63 @@ Loyer estimé : 1 650 € par mois.`;
           </section>
         </div>
 
+        <section className="card rent-market-card">
+          <div className="section-title"><span><MapPin size={18} /> Estimation du loyer de marché</span></div>
+          <p className="rent-market-intro">
+            Saisissez le loyer moyen observé dans le secteur pour un bien comparable. 
+            Renta Locative l’ajuste selon la surface, le type de bien, l’état et les prestations.
+          </p>
+
+          <div className="sector-rent-input">
+            <label>
+              Référence du secteur
+              <span>
+                <input
+                  value={sectorRentPerM2}
+                  onChange={(event) => setSectorRentPerM2(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="Ex. 18"
+                />
+                <b>€/m²/mois</b>
+              </span>
+            </label>
+            <small>Cette valeur doit provenir d’annonces comparables ou d’une source locale récente.</small>
+          </div>
+
+          {marketRentEstimate ? (
+            <div className="market-rent-result">
+              <div className="market-rent-main">
+                <span>LOYER DE MARCHÉ ESTIMÉ</span>
+                <strong>{euro(marketRentEstimate.central)}<small>/mois</small></strong>
+                <p>Fourchette prudente : {euro(marketRentEstimate.low)} à {euro(marketRentEstimate.high)}/mois</p>
+                <em>Confiance {marketRentEstimate.confidence}</em>
+              </div>
+              <div className="market-rent-factors">
+                <b>Ajustements appliqués</b>
+                {marketRentEstimate.factors.length > 0
+                  ? marketRentEstimate.factors.map((factor) => (
+                      <div key={`${factor.label}-${factor.impact}`}>
+                        <span>{factor.label}</span><strong>{factor.impact}</strong>
+                      </div>
+                    ))
+                  : <p>Aucun ajustement particulier détecté.</p>}
+              </div>
+            </div>
+          ) : (
+            <div className="analysis-unavailable">
+              <MapPin size={18} />
+              <div>
+                <b>Référence sectorielle nécessaire</b>
+                <span>L’application n’invente pas le prix au m² du quartier. Renseignez une référence locale récente pour obtenir l’estimation.</span>
+              </div>
+            </div>
+          )}
+
+          <p className="rent-estimate-warning">
+            Estimation distincte des données de l’annonce. Elle ne remplace pas une étude de biens comparables réellement disponibles.
+          </p>
+        </section>
+
         <div className="analysis-layout">
           <section className="card insight-card positive">
             <div className="section-title"><span><ThumbsUp size={18} /> Points forts</span></div>
@@ -1099,7 +1222,7 @@ Loyer estimé : 1 650 € par mois.`;
 
       <div className="analysis-promises">
         <div><Search /><b>Extraction automatique</b><span>Type de bien, prix, surface, terrain, DPE, charges et loyer.</span></div>
-        <div><BarChart3 /><b>Analyse financière</b><span>Calcul distinct pour appartement ou maison, avec entretien et travaux adaptés.</span></div>
+        <div><BarChart3 /><b>Analyse financière</b><span>Calcul financier séparé et estimation locative fondée sur une référence sectorielle explicite.</span></div>
         <div><Target /><b>Aide à la négociation</b><span>Score, verdict et prix d’offre conseillé.</span></div>
       </div>
 

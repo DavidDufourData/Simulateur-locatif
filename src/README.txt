@@ -1,58 +1,46 @@
-RENTA LOCATIVE V19 — DONNÉES FIABLES, AUCUNE VALEUR INVENTÉE
+RENTA LOCATIVE V20 — ESTIMATION DU LOYER PAR LE SECTEUR
 
-Cette version corrige le problème de confiance observé sur l’annonce de l’appartement de 72 m².
+OBJECTIF
+Permettre une estimation locative sans transformer une hypothèse en donnée détectée.
 
-RÈGLE ABSOLUE
-Une donnée absente de l’annonce reste absente.
+PRINCIPE
+L’utilisateur renseigne une référence locale récente en €/m²/mois, issue :
+- d’annonces comparables ;
+- d’une étude locale ;
+- d’un observatoire ;
+- d’un professionnel immobilier.
 
-L’application ne crée plus automatiquement :
-- des charges de copropriété ;
-- une taxe foncière ;
-- un loyer ;
-- un DPE ;
-- un budget travaux ;
-- un rendement ;
-- un cash-flow ;
-- un prix de négociation.
+Renta Locative applique ensuite des ajustements transparents selon :
+- appartement ou maison ;
+- surface et effet de volume ;
+- état rénové ou travaux ;
+- parking ou garage ;
+- balcon, terrasse, jardin ou terrain ;
+- DPE lorsqu’il est réellement indiqué.
 
-EXEMPLE DE L’ANNONCE TESTÉE
-L’annonce indique :
-- appartement ;
-- 3 pièces ;
-- 72 m² ;
-- balcon ;
-- parking ;
-- copropriété ;
-- ravalement réalisé en 2021 ;
-- consommation énergétique de 86 kWh/m²/an.
+RÉSULTAT
+L’application affiche :
+- un loyer central estimé ;
+- une fourchette prudente de ±6 % ;
+- le détail des ajustements ;
+- un niveau de confiance ;
+- un avertissement clair indiquant qu’il s’agit d’une estimation.
 
-Elle n’indique pas :
-- le montant des charges ;
-- la taxe foncière ;
-- le loyer ;
-- une lettre DPE complète ;
-- un budget travaux.
+RÈGLE DE CONFIANCE CONSERVÉE
+- Les données de l’annonce restent séparées.
+- Les charges, la taxe foncière et le loyer ne sont jamais inventés.
+- Le prix moyen du secteur n’est pas créé automatiquement.
+- Sans référence sectorielle, l’application affiche « Référence sectorielle nécessaire ».
 
-La V19 affiche donc :
-- Charges de copropriété : Non renseignées
-- Taxe foncière : Non renseignée
-- Loyer : Non renseigné
-- DPE : Non renseigné
-- Travaux : Aucun travail signalé
-- Rendement : Non calculable
-- Cash-flow : Non calculable
-- Prix de négociation : Impossible à déterminer sérieusement
-- Verdict : À COMPLÉTER
+EXEMPLE
+Référence locale : 18 €/m²/mois
+Surface : 72 m²
+Surface familiale : -4,5 %
+Balcon : +4 %
+Parking : +4 %
+DPE favorable : +2,5 %
 
-SÉPARATION DES INFORMATIONS
-1. Données réellement détectées dans l’annonce
-2. Calculs uniquement lorsque toutes les données essentielles sont présentes
-3. Données manquantes clairement signalées
-
-SÉCURITÉ CONTRE LES HALLUCINATIONS
-Même si un service IA est ultérieurement branché, les valeurs factuelles importantes
-(prix, surface, loyer, charges, taxe foncière et DPE) restent validées par le texte local.
-L’IA ne peut pas transformer une estimation en donnée détectée.
+Le moteur calcule une estimation argumentée et non une fausse donnée factuelle.
 
 FICHIERS À REMPLACER
 - App.jsx
