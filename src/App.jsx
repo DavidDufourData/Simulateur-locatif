@@ -4,7 +4,7 @@ import {
   BarChart3, Building2, Calculator, Check, ChevronRight, CircleDollarSign,
   Crown, Download, Gauge, Home, LineChart, Moon, Plus, Save, Scale,
   Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search,
-  Newspaper, BookOpen, Landmark, RefreshCw, ShieldCheck, Clock3, ExternalLink, Activity, MapPin, UserRound, Settings, FolderOpen
+  Newspaper, BookOpen, Landmark, RefreshCw, ShieldCheck, Clock3, ExternalLink, Activity, MapPin, UserRound, Settings, FolderOpen, SlidersHorizontal, CheckCircle2
 } from "lucide-react";
 
 const PREMIUM_STORAGE_KEY = "renta-v7-premium";
@@ -918,6 +918,90 @@ function estimateRentFromSector(result, sectorRentPerM2) {
   return { base, adjustment, central, low, high, confidence, factors };
 }
 
+
+function recalculateFinancialAnalysis(result, overrides) {
+  if (!result) return null;
+
+  const hasRent = String(overrides.rent ?? "").trim() !== "";
+  const hasCharges = String(overrides.charges ?? "").trim() !== "";
+  const hasPropertyTax = String(overrides.propertyTax ?? "").trim() !== "";
+  const rent = toNumber(overrides.rent);
+  const charges = toNumber(overrides.charges);
+  const propertyTax = toNumber(overrides.propertyTax);
+  const contributionRate = clamp(toNumber(overrides.contributionRate) || 10, 0, 100) / 100;
+  const interestRate = Math.max(0, toNumber(overrides.interestRate) || 3.2) / 100;
+  const durationYears = clamp(toNumber(overrides.durationYears) || 25, 5, 30);
+
+  const rentReady = hasRent && rent > 0;
+  const chargesReady = result.propertyType === "house" || hasCharges;
+  const taxReady = hasPropertyTax && propertyTax > 0;
+  const financialReady = result.price > 0 && result.surface > 0 && rentReady && chargesReady && taxReady;
+
+  const works = result.worksEstimate || 0;
+  const acquisitionCost = result.price > 0 ? result.price * 1.08 + works : 0;
+  const yearlyRent = rent * 12;
+  const vacancyRate = result.propertyType === "house" ? 0.06 : 0.05;
+  const maintenanceRate = result.propertyType === "house" ? 0.06 : 0.035;
+  const yearlyCharges =
+    (result.propertyType === "house" ? 0 : charges * 12) +
+    propertyTax +
+    yearlyRent * vacancyRate +
+    yearlyRent * maintenanceRate;
+
+  const grossYield = financialReady && acquisitionCost ? yearlyRent / acquisitionCost * 100 : null;
+  const netYield = financialReady && acquisitionCost ? (yearlyRent - yearlyCharges) / acquisitionCost * 100 : null;
+
+  const contribution = acquisitionCost * contributionRate;
+  const principal = Math.max(0, acquisitionCost - contribution);
+  const months = durationYears * 12;
+  const monthlyRate = interestRate / 12;
+  const payment = principal > 0
+    ? monthlyRate > 0
+      ? principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))
+      : principal / months
+    : 0;
+  const cashflow = financialReady ? (yearlyRent - yearlyCharges) / 12 - payment : null;
+
+  let score = null;
+  if (financialReady) {
+    score = 54;
+    score += grossYield >= 7 ? 18 : grossYield >= 5.5 ? 10 : grossYield >= 4.5 ? 4 : -8;
+    score += netYield >= 5 ? 12 : netYield >= 3.5 ? 6 : -5;
+    score += cashflow >= 0 ? 10 : cashflow >= -150 ? 3 : -7;
+    score += result.hasParking ? 3 : 0;
+    score += result.hasOutdoor ? 3 : 0;
+    score += result.isRenovated ? 4 : 0;
+    score -= result.worksDetected ? 6 : 0;
+    score = Math.round(clamp(score, 20, 94));
+  }
+
+  const negotiationRate = score === null ? null : score >= 80 ? 0.02 : score >= 62 ? 0.06 : 0.1;
+  const advisedPrice = negotiationRate !== null
+    ? Math.round(result.price * (1 - negotiationRate) / 1000) * 1000
+    : null;
+  const verdict = score === null ? "À COMPLÉTER" : score >= 80 ? "ACHETER" : score >= 62 ? "NÉGOCIER" : "ÉVITER";
+  const verdictTone = score === null ? "incomplete" : score >= 80 ? "buy" : score >= 62 ? "negotiate" : "avoid";
+
+  return {
+    ...result,
+    estimatedRent: rent,
+    monthlyCharges: charges,
+    propertyTax,
+    financialReady,
+    grossYield,
+    netYield,
+    cashflow,
+    payment,
+    score,
+    advisedPrice,
+    verdict,
+    verdictTone,
+    contributionRate: contributionRate * 100,
+    interestRate: interestRate * 100,
+    durationYears
+  };
+}
+
 function AnnouncementAnalysis({ onExport }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle");
@@ -929,6 +1013,14 @@ function AnnouncementAnalysis({ onExport }) {
   const [rentSourceStatus, setRentSourceStatus] = useState("idle");
   const [rentSourceError, setRentSourceError] = useState("");
   const [rentCity, setRentCity] = useState("");
+  const [validatedRent, setValidatedRent] = useState("");
+  const [financialInputs, setFinancialInputs] = useState({
+    charges: "",
+    propertyTax: "",
+    contributionRate: "10",
+    interestRate: "3,2",
+    durationYears: "25"
+  });
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -991,6 +1083,14 @@ Loyer estimé : 1 650 € par mois.`;
     const { analysis, usedAI: aiUsed } = await analyzeAnnouncement(input);
     setResult(analysis);
     setUsedAI(aiUsed);
+    setValidatedRent(analysis.rentDetected ? String(analysis.estimatedRent) : "");
+    setFinancialInputs({
+      charges: analysis.chargesDetected ? String(analysis.monthlyCharges) : "",
+      propertyTax: analysis.propertyTaxDetected ? String(analysis.propertyTax) : "",
+      contributionRate: "10",
+      interestRate: "3,2",
+      durationYears: "25"
+    });
     setStatus("done");
     const detectedCity = analysis.city === "Ville à confirmer" ? "" : analysis.city;
     setRentCity(detectedCity);
@@ -1007,11 +1107,40 @@ Loyer estimé : 1 650 € par mois.`;
     setRentSourceStatus("idle");
     setRentSourceError("");
     setRentCity("");
+    setValidatedRent("");
+    setFinancialInputs({
+      charges: "",
+      propertyTax: "",
+      contributionRate: "10",
+      interestRate: "3,2",
+      durationYears: "25"
+    });
   };
 
   const marketRentEstimate = result
     ? estimateRentFromSector(result, sectorRentPerM2)
     : null;
+
+  const liveResult = result
+    ? recalculateFinancialAnalysis(result, {
+        rent: validatedRent,
+        charges: financialInputs.charges,
+        propertyTax: financialInputs.propertyTax,
+        contributionRate: financialInputs.contributionRate,
+        interestRate: financialInputs.interestRate,
+        durationYears: financialInputs.durationYears
+      })
+    : null;
+
+  const completedSteps = result ? [
+    Boolean(result.price && result.surface),
+    Boolean(marketRentEstimate),
+    toNumber(validatedRent) > 0,
+    result.propertyType === "house" || String(financialInputs.charges).trim() !== "",
+    toNumber(financialInputs.propertyTax) > 0,
+    toNumber(financialInputs.interestRate) >= 0 && toNumber(financialInputs.durationYears) > 0
+  ].filter(Boolean).length : 0;
+  const completionPercent = Math.round(completedSteps / 6 * 100);
 
   if (status === "loading") {
     return (
@@ -1054,43 +1183,59 @@ Loyer estimé : 1 650 € par mois.`;
           </div>
         </div>
 
-        <section className={`ai-verdict ${result.verdictTone}`}>
+        <section className="card analysis-progress-card">
+          <div className="analysis-progress-head">
+            <div><span>ANALYSE ÉVOLUTIVE</span><strong>{completionPercent} % complétée</strong></div>
+            <b>{liveResult?.financialReady ? "Analyse financière active" : "Données à compléter"}</b>
+          </div>
+          <div className="analysis-progress-track"><i style={{ width: `${completionPercent}%` }} /></div>
+          <div className="analysis-steps">
+            <span className={result.price && result.surface ? "done" : ""}>Annonce analysée</span>
+            <span className={marketRentEstimate ? "done" : ""}>Loyer estimé</span>
+            <span className={toNumber(validatedRent) > 0 ? "done" : ""}>Loyer validé</span>
+            <span className={result.propertyType === "house" || String(financialInputs.charges).trim() !== "" ? "done" : ""}>Charges</span>
+            <span className={toNumber(financialInputs.propertyTax) > 0 ? "done" : ""}>Taxe foncière</span>
+            <span className={liveResult?.financialReady ? "done" : ""}>Analyse finale</span>
+          </div>
+        </section>
+
+        <section className={`ai-verdict ${liveResult.verdictTone}`}>
           <div>
             <span>VERDICT RENTA IA</span>
-            <strong>{result.verdict}</strong>
+            <strong>{liveResult.verdict}</strong>
             <p>
-              {result.verdict === "À COMPLÉTER"
+              {liveResult.verdict === "À COMPLÉTER"
                 ? "Les charges, la taxe foncière ou le loyer manquent : aucun verdict financier fiable n’est affiché."
-                : result.verdict === "ACHETER"
+                : liveResult.verdict === "ACHETER"
                 ? "Le projet présente un équilibre financier particulièrement intéressant."
-                : result.verdict === "NÉGOCIER"
+                : liveResult.verdict === "NÉGOCIER"
                 ? "Le projet est pertinent, mais le prix affiché doit être retravaillé."
                 : "Le rendement et les risques identifiés ne compensent pas le prix demandé."}
             </p>
           </div>
           <div className="ai-score-ring">
-            <strong>{result.score ?? "—"}</strong>{result.score !== null && <small>/100</small>}
+            <strong>{liveResult.score ?? "—"}</strong>{liveResult.score !== null && <small>/100</small>}
           </div>
         </section>
 
         <div className="analysis-metrics">
           <Metric label="Prix affiché" value={result.price ? euro(result.price) : "Non renseigné"} note={result.price && result.surface ? `${euro(result.price / result.surface)}/m²` : "Donnée de l’annonce"} icon={<Building2 />} />
           <Metric label="Loyer dans l’annonce" value={result.rentDetected ? euro(result.estimatedRent) : "Non renseigné"} note="Aucune estimation inventée" icon={<WalletCards />} tone="green" />
-          <Metric label="Rendement brut" value={result.financialReady ? pct(result.grossYield) : "Non calculable"} note={result.financialReady ? `Net : ${pct(result.netYield)}` : "Complétez les données manquantes"} icon={<TrendingUp />} tone="purple" />
-          <Metric label="Cash-flow" value={result.financialReady ? euro(result.cashflow) : "Non calculable"} note={result.financialReady ? "Financement 25 ans, apport 10 %" : "Calcul suspendu"} icon={<CircleDollarSign />} tone={result.financialReady && result.cashflow >= 0 ? "green" : "red"} />
+          <Metric label="Rendement brut" value={liveResult.financialReady ? pct(liveResult.grossYield) : "Non calculable"} note={liveResult.financialReady ? `Net : ${pct(liveResult.netYield)}` : "Complétez les données manquantes"} icon={<TrendingUp />} tone="purple" />
+          <Metric label="Cash-flow" value={liveResult.financialReady ? euro(liveResult.cashflow) : "Non calculable"} note={liveResult.financialReady ? `Mensualité : ${euro(liveResult.payment)}` : "Calcul suspendu"} icon={<CircleDollarSign />} tone={liveResult.financialReady && liveResult.cashflow >= 0 ? "green" : "red"} />
         </div>
 
         <div className="analysis-layout">
           <section className="card negotiation-card">
             <div className="section-title"><span><Target size={18} /> Prix de négociation</span></div>
-            {result.advisedPrice ? (
+            {liveResult.advisedPrice ? (
               <>
                 <div className="price-comparison">
                   <div><span>Prix affiché</span><b>{euro(result.price)}</b></div>
                   <ChevronRight />
-                  <div className="recommended-price"><span>Offre indicative</span><b>{euro(result.advisedPrice)}</b></div>
+                  <div className="recommended-price"><span>Offre indicative</span><b>{euro(liveResult.advisedPrice)}</b></div>
                 </div>
-                <p>Écart indicatif : <strong>{euro(result.price - result.advisedPrice)}</strong></p>
+                <p>Écart indicatif : <strong>{euro(result.price - liveResult.advisedPrice)}</strong></p>
               </>
             ) : (
               <div className="analysis-unavailable">
@@ -1204,6 +1349,12 @@ Loyer estimé : 1 650 € par mois.`;
                     ? `Base communale officielle : ${rentSource.rentPerM2} €/m² CC`
                     : "Base personnalisée renseignée manuellement"}
                 </small>
+                <button
+                  className="validate-rent-button"
+                  onClick={() => setValidatedRent(String(marketRentEstimate.central))}
+                >
+                  <Check size={15} /> Utiliser ce loyer
+                </button>
               </div>
               <div className="market-rent-factors">
                 <b>Ajustements appliqués</b>
@@ -1231,6 +1382,22 @@ Loyer estimé : 1 650 € par mois.`;
           </p>
         </section>
 
+        <section className="card financial-editor-card">
+          <div className="section-title"><span><SlidersHorizontal size={18} /> Hypothèses de l’analyse</span></div>
+          <p>Chaque modification recalcule immédiatement le rendement, le cash-flow, la note et le prix conseillé.</p>
+          <div className="financial-input-grid">
+            <label><span>Loyer retenu</span><div><input value={validatedRent} onChange={(e) => setValidatedRent(e.target.value)} inputMode="numeric" placeholder="Ex. 1 050" /><b>€/mois</b></div></label>
+            {result.propertyType !== "house" && <label><span>Charges de copropriété</span><div><input value={financialInputs.charges} onChange={(e) => setFinancialInputs({...financialInputs, charges:e.target.value})} inputMode="numeric" placeholder="Ex. 105" /><b>€/mois</b></div></label>}
+            <label><span>Taxe foncière</span><div><input value={financialInputs.propertyTax} onChange={(e) => setFinancialInputs({...financialInputs, propertyTax:e.target.value})} inputMode="numeric" placeholder="Ex. 890" /><b>€/an</b></div></label>
+            <label><span>Apport</span><div><input value={financialInputs.contributionRate} onChange={(e) => setFinancialInputs({...financialInputs, contributionRate:e.target.value})} inputMode="decimal" /><b>%</b></div></label>
+            <label><span>Taux du crédit</span><div><input value={financialInputs.interestRate} onChange={(e) => setFinancialInputs({...financialInputs, interestRate:e.target.value})} inputMode="decimal" /><b>%</b></div></label>
+            <label><span>Durée</span><div><input value={financialInputs.durationYears} onChange={(e) => setFinancialInputs({...financialInputs, durationYears:e.target.value})} inputMode="numeric" /><b>ans</b></div></label>
+          </div>
+          {liveResult.financialReady
+            ? <div className="recalculated-banner"><CheckCircle2 size={18} /><span>Analyse recalculée avec un loyer validé de <b>{euro(liveResult.estimatedRent)}/mois</b>.</span></div>
+            : <div className="recalculated-banner incomplete"><AlertTriangle size={18} /><span>Renseignez le loyer{result.propertyType !== "house" ? ", les charges" : ""} et la taxe foncière pour activer l’analyse financière.</span></div>}
+        </section>
+
         <div className="analysis-layout">
           <section className="card insight-card positive">
             <div className="section-title"><span><ThumbsUp size={18} /> Points forts</span></div>
@@ -1249,7 +1416,7 @@ Loyer estimé : 1 650 € par mois.`;
             <p>
               {result.financialReady
                 ? <>À {euro(result.price)}, le projet affiche un rendement brut calculé à {pct(result.grossYield)}.
-                    L’offre indicative de {euro(result.advisedPrice)} repose uniquement sur les données présentes. </>
+                    L’offre indicative de {euro(liveResult.advisedPrice)} repose uniquement sur les données présentes. </>
                 : <>Le texte ne contient pas assez de données pour donner un rendement, un cash-flow ou un prix d’offre fiable. </>}
               {result.propertyType === "house"
                 ? "Pour une maison, contrôlez en priorité la toiture, la charpente, le chauffage, l’humidité, l’assainissement, la taxe foncière et le loyer de maisons réellement comparables."

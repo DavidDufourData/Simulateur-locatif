@@ -1,69 +1,51 @@
-RENTA LOCATIVE V21 — ESTIMATION DU LOYER AVEC SOURCE OFFICIELLE
+RENTA LOCATIVE V22 — ANALYSE ÉVOLUTIVE
 
-SOURCE PRINCIPALE
-Carte des loyers 2025 publiée par l’ANIL et le ministère du Logement sur data.gouv.fr.
+NOUVEAU PARCOURS
 
-Mention obligatoire de la source :
-« Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin »
+1. Analyse de l’annonce
+L’application extrait uniquement les informations réellement présentes.
 
-DONNÉES UTILISÉES
-- indicateur communal de loyer d’annonce ;
-- charges comprises ;
-- logement non meublé ;
-- biens types mis en location au 3e trimestre 2025 ;
-- référence différente selon :
-  - appartement T1-T2 ;
-  - appartement T3 et plus ;
-  - appartement toutes typologies ;
-  - maison.
+2. Estimation du loyer
+La référence sectorielle officielle est récupérée via l’API ANIL/data.gouv.fr.
+L’utilisateur peut utiliser le loyer proposé ou saisir son propre montant.
 
-FONCTIONNEMENT
-1. L’application détecte la commune et le type de bien.
-2. Elle appelle /api/rent-reference.
-3. L’API télécharge la ressource CSV officielle correspondant à la typologie.
-4. Elle recherche la commune.
-5. Elle renvoie le loyer officiel en €/m²/mois et les indicateurs de qualité disponibles.
-6. Le moteur applique ensuite des ajustements transparents liés au bien.
+3. Validation du loyer
+Le bouton « Utiliser ce loyer » enregistre l’estimation comme hypothèse financière.
 
-TRANSPARENCE
-L’écran affiche :
-- la valeur communale officielle ;
-- l’année ;
-- la typologie retenue ;
-- la source exacte ;
-- un lien vers data.gouv.fr ;
-- le loyer central estimé ;
-- la fourchette ;
-- chaque ajustement appliqué.
+4. Recalcul instantané
+Toute modification met immédiatement à jour :
+- rendement brut ;
+- rendement net ;
+- cash-flow ;
+- mensualité de crédit ;
+- score ;
+- verdict ;
+- prix de négociation conseillé.
 
-SÉCURITÉ
-- Aucun chiffre sectoriel n’est inventé.
-- Si la commune n’est pas trouvée ou si la source est indisponible, aucun loyer automatique n’est affiché.
-- Une saisie manuelle reste possible comme solution de secours.
-- La commune peut être corrigée si elle n’est pas présente dans l’annonce.
+DONNÉES MODIFIABLES
+- loyer retenu ;
+- charges mensuelles ;
+- taxe foncière annuelle ;
+- apport en pourcentage ;
+- taux du crédit ;
+- durée du crédit.
 
-PRÉCAUTIONS
-La donnée officielle est un indicateur communal de loyer d’annonce charges comprises.
-Elle ne constitue pas un loyer garanti, un loyer réellement signé ou un comparable exact.
-Les indicateurs doivent être interprétés avec prudence lorsque le nombre d’observations ou le R² est faible.
+PROGRESSION
+Un bandeau indique :
+- annonce analysée ;
+- loyer estimé ;
+- loyer validé ;
+- charges renseignées ;
+- taxe foncière renseignée ;
+- analyse finale disponible.
 
-NOUVEAU FICHIER
-- api/rent-reference.js
+RÈGLE DE CONFIANCE
+Aucun résultat financier n’est affiché tant que les données indispensables ne sont pas présentes.
+L’utilisateur voit clairement quelles valeurs viennent de l’annonce, d’une source sectorielle ou d’une saisie manuelle.
 
-FICHIERS À REMPLACER
+FICHIERS MODIFIÉS
 - App.jsx
 - styles.css
-- api/investor-radar.js
 
-FICHIER À AJOUTER
+FICHIER API CONSERVÉ
 - api/rent-reference.js
-
-RESSOURCES DATA.GOUV UTILISÉES
-- Appartement toutes typologies :
-  55b34088-0964-415f-9df7-d87dd98a09be
-- Appartement T1-T2 :
-  14a1fe11-b2d1-49b3-9f6b-83d12df9482c
-- Appartement T3 et plus :
-  5e3b28a4-cf56-43a3-ae79-43cceeb27f8c
-- Maison :
-  129f764d-b613-44e4-952c-5ff50a8c9b73
