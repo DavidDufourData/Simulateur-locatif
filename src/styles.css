@@ -1652,3 +1652,72 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
   .novice-result-grid{grid-template-columns:repeat(2,1fr)}
   .novice-actions-card{grid-template-columns:1fr}
 }
+
+
+/* V25 — assistant d’acquisition interactif */
+.acquisition-assistant-card{display:grid;gap:16px}
+.acquisition-assistant-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.acquisition-assistant-head>div:first-child>span{
+  display:block;color:var(--blue);font-size:9px;font-weight:900;letter-spacing:.09em
+}
+.acquisition-assistant-head>div:first-child>strong{display:block;margin-top:6px;font-size:22px}
+.acquisition-assistant-head p{margin:5px 0 0;color:var(--muted);font-size:11px}
+.acquisition-progress-badge{
+  min-width:118px;padding:10px 12px;border:1px solid var(--line);border-radius:13px;
+  background:var(--card-soft);text-align:center
+}
+.acquisition-progress-badge strong{display:block;font-size:18px}
+.acquisition-progress-badge span{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.acquisition-progress-badge.ready{border-color:rgba(24,168,124,.3);background:rgba(24,168,124,.08)}
+.acquisition-progress-badge.ready strong,.acquisition-progress-badge.ready span{color:var(--green)}
+.acquisition-track i{background:linear-gradient(90deg,var(--blue),var(--green))}
+.priority-action-list{display:grid;gap:11px}
+.priority-action{
+  display:grid;gap:12px;padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--card-soft);
+  transition:border-color .2s ease,background .2s ease
+}
+.priority-action.checked{border-color:rgba(24,168,124,.3);background:rgba(24,168,124,.055)}
+.priority-action-main{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:flex-start}
+.priority-check{
+  display:grid;place-items:center;width:28px;height:28px;border:2px solid var(--line);border-radius:9px;
+  background:var(--card);color:#fff;cursor:pointer
+}
+.priority-check.checked{border-color:var(--green);background:var(--green)}
+.priority-action-title>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.priority-action-title strong{font-size:13px;line-height:1.35}
+.impact-badge{flex:0 0 auto;padding:4px 7px;border-radius:999px;font-size:8px;font-weight:900;text-transform:uppercase}
+.impact-badge.high{background:rgba(220,83,100,.1);color:var(--red)}
+.impact-badge.medium{background:rgba(221,139,37,.11);color:var(--orange)}
+.priority-why-button{
+  display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:0;border:0;background:transparent;
+  color:var(--blue);font-size:10px;font-weight:800;cursor:pointer
+}
+.priority-why-button svg{transition:transform .2s ease}
+.priority-why-button svg.rotated{transform:rotate(90deg)}
+.priority-action-details{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:13px;border-radius:12px;background:var(--card)
+}
+.priority-action-details b{display:block;margin-bottom:7px;font-size:10px}
+.priority-action-details ul{margin:0;padding-left:16px}
+.priority-action-details li{padding:3px 0;color:var(--muted);font-size:10px;line-height:1.45}
+.verified-action-button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;
+  border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);
+  font-size:10px;font-weight:800;cursor:pointer
+}
+.verified-action-button.checked{border-color:rgba(24,168,124,.28);background:rgba(24,168,124,.08);color:var(--green)}
+.acquisition-ready-banner{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:11px;padding:14px;
+  border:1px solid rgba(24,168,124,.3);border-radius:14px;background:rgba(24,168,124,.08);color:var(--green)
+}
+.acquisition-ready-banner>div strong,.acquisition-ready-banner>div span{display:block}
+.acquisition-ready-banner>div strong{font-size:13px}
+.acquisition-ready-banner>div span{margin-top:3px;font-size:10px}
+@media(max-width:780px){
+  .acquisition-assistant-head{align-items:stretch;flex-direction:column}
+  .acquisition-progress-badge{width:100%}
+  .priority-action-title>div{align-items:flex-start;flex-direction:column}
+  .priority-action-details{grid-template-columns:1fr}
+  .acquisition-ready-banner{grid-template-columns:auto 1fr}
+  .acquisition-ready-banner .primary{grid-column:1/-1;width:100%;justify-content:center}
+}

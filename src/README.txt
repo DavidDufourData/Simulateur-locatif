@@ -1,50 +1,46 @@
-RENTA LOCATIVE V24 — REFONTE COMPLÈTE POUR NOVICES
+RENTA LOCATIVE V25 — ASSISTANT D’ACQUISITION
 
-Cette version ne se contente pas d’ajouter le bouton d’effacement.
-La page d’analyse a été entièrement réorganisée.
+Cette version ajoute une vraie checklist interactive avant achat.
 
-NOUVEAU PARCOURS
+NOUVEAUTÉS
 
-1. Synthèse immédiate
-- verdict provisoire ou final ;
-- niveau de complétude ;
-- explication simple ;
-- score ou pourcentage de progression.
+1. Actions prioritaires interactives
+Chaque action affiche :
+- son niveau d’impact ;
+- pourquoi elle est importante ;
+- comment la vérifier ;
+- un bouton « J’ai vérifié ».
 
-2. Prochaine étape
-Un seul bloc indique clairement ce que l’utilisateur doit faire ensuite :
-- rechercher le loyer ;
-- utiliser le loyer estimé ;
-- compléter les données ;
-- consulter le résultat.
+2. Explications adaptées au type de bien
+Pour un appartement :
+- procès-verbaux de copropriété ;
+- loyer de marché ;
+- taxe foncière et charges.
 
-3. Compléter automatiquement
-Un bouton principal accompagne l’utilisateur au lieu de lui présenter immédiatement tous les champs techniques.
+Pour une maison :
+- toiture, humidité et assainissement ;
+- loyer de marché ;
+- taxe foncière et coûts d’entretien.
 
-4. Progression simplifiée
-La page indique :
-- annonce analysée ;
-- loyer estimé ;
-- loyer validé ;
-- charges ;
-- taxe foncière.
+3. Progression du dossier
+Une barre indique le pourcentage de vérifications réalisées.
 
-5. Résultat essentiel
-Lorsque l’analyse est complète, seuls quatre indicateurs sont affichés en priorité :
-- rendement brut ;
-- rendement net ;
-- cash-flow ;
-- prix conseillé.
+4. Badge final
+Lorsque :
+- les trois contrôles sont cochés ;
+- l’analyse financière est complète ;
 
-6. Conseils réellement utiles
-Trois actions prioritaires sont affichées avant toute décision.
+le badge « Dossier prêt pour une offre » apparaît.
 
-7. Détails avancés masqués
-Les données détectées, les hypothèses, les points forts et les points de vigilance sont cachés par défaut.
-Ils apparaissent uniquement via « Voir le détail du calcul ».
+5. Rapport
+Le bouton de génération du rapport apparaît lorsque le dossier est prêt.
 
-8. Effacement rapide conservé
-Le bouton Effacer et la croix dans la zone de collage restent présents.
+6. Refonte novice conservée
+- synthèse simple ;
+- détails avancés masqués ;
+- estimation du loyer ;
+- recalcul instantané ;
+- effacement rapide du texte collé.
 
 FICHIERS MODIFIÉS
 - App.jsx

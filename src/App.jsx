@@ -1022,6 +1022,8 @@ function AnnouncementAnalysis({ onExport }) {
     durationYears: "25"
   });
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
+  const [checkedActions, setCheckedActions] = useState({});
+  const [openPriorityAction, setOpenPriorityAction] = useState(null);
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -1117,6 +1119,8 @@ Loyer estimé : 1 650 € par mois.`;
       durationYears: "25"
     });
     setShowAdvancedDetails(false);
+    setCheckedActions({});
+    setOpenPriorityAction(null);
   };
 
   const marketRentEstimate = result
@@ -1183,6 +1187,112 @@ Loyer estimé : 1 650 € par mois.`;
       }
       setShowAdvancedDetails(true);
     };
+
+    const priorityActions = result.propertyType === "house"
+      ? [
+          {
+            id: "structure",
+            title: "Vérifier la toiture, l’humidité et l’assainissement",
+            impact: "Élevé",
+            impactTone: "high",
+            why: [
+              "Une toiture ou un problème d’humidité peut représenter plusieurs dizaines de milliers d’euros.",
+              "Un assainissement non conforme peut entraîner des travaux obligatoires.",
+              "Ces risques peuvent justifier une forte négociation ou l’abandon du projet."
+            ],
+            how: [
+              "Demander les factures et diagnostics disponibles.",
+              "Observer les combles, plafonds, murs bas et odeurs d’humidité.",
+              "Faire intervenir un professionnel en cas de doute."
+            ]
+          },
+          {
+            id: "rent",
+            title: "Confirmer le loyer de marché",
+            impact: "Élevé",
+            impactTone: "high",
+            why: [
+              "Le loyer détermine directement le rendement et le cash-flow.",
+              "Une estimation trop optimiste peut rendre un projet artificiellement rentable.",
+              "Les maisons se comparent difficilement sans tenir compte du terrain et de l’état."
+            ],
+            how: [
+              "Comparer au moins trois maisons similaires dans la même commune.",
+              "Vérifier la surface, le terrain, le nombre de chambres et l’état.",
+              "Retenir une fourchette prudente plutôt que l’annonce la plus chère."
+            ]
+          },
+          {
+            id: "costs",
+            title: "Vérifier la taxe foncière et les coûts réels",
+            impact: "Moyen",
+            impactTone: "medium",
+            why: [
+              "La taxe foncière réduit directement la rentabilité nette.",
+              "L’entretien d’une maison est souvent plus coûteux qu’un appartement.",
+              "Des dépenses sous-estimées peuvent créer un cash-flow négatif."
+            ],
+            how: [
+              "Demander le dernier avis de taxe foncière.",
+              "Prévoir une réserve annuelle pour l’entretien courant.",
+              "Vérifier les coûts de chauffage et d’assurance."
+            ]
+          }
+        ]
+      : [
+          {
+            id: "copro",
+            title: "Lire les trois derniers procès-verbaux de copropriété",
+            impact: "Élevé",
+            impactTone: "high",
+            why: [
+              "Ils révèlent les travaux votés ou envisagés : ravalement, toiture, ascenseur, chauffage.",
+              "Ils permettent d’identifier les impayés, litiges et tensions dans la copropriété.",
+              "Un appel de fonds important peut fortement modifier le coût réel d’acquisition."
+            ],
+            how: [
+              "Demander les trois derniers PV au vendeur ou à l’agent immobilier.",
+              "Rechercher les résolutions concernant les travaux et appels de fonds.",
+              "Vérifier si les travaux votés restent à la charge du vendeur ou de l’acheteur."
+            ]
+          },
+          {
+            id: "rent",
+            title: "Confirmer le loyer de marché",
+            impact: "Élevé",
+            impactTone: "high",
+            why: [
+              "Le loyer détermine directement le rendement et le cash-flow.",
+              "Une estimation trop élevée peut donner une fausse impression de rentabilité.",
+              "Le marché peut varier fortement entre deux quartiers d’une même commune."
+            ],
+            how: [
+              "Comparer au moins trois annonces similaires et récentes.",
+              "Retenir la même surface, le même nombre de pièces et des prestations proches.",
+              "Vérifier que les annonces restent peu de temps en ligne."
+            ]
+          },
+          {
+            id: "costs",
+            title: "Vérifier la taxe foncière et les charges réelles",
+            impact: "Moyen",
+            impactTone: "medium",
+            why: [
+              "Elles réduisent directement la rentabilité nette.",
+              "Des charges élevées peuvent rendre le logement moins attractif pour un locataire.",
+              "Une taxe foncière importante peut transformer un bon projet en investissement moyen."
+            ],
+            how: [
+              "Demander le dernier avis de taxe foncière.",
+              "Demander le dernier relevé annuel de charges.",
+              "Distinguer les charges récupérables sur le locataire des charges restant au propriétaire."
+            ]
+          }
+        ];
+
+    const verifiedActionsCount = priorityActions.filter((action) => checkedActions[action.id]).length;
+    const acquisitionProgress = Math.round(verifiedActionsCount / priorityActions.length * 100);
+    const acquisitionReady = verifiedActionsCount === priorityActions.length && liveResult.financialReady;
 
     return (
       <div className="page-section announcement-page novice-analysis-page">
@@ -1279,16 +1389,96 @@ Loyer estimé : 1 650 € par mois.`;
           </section>
         )}
 
-        <section className="card novice-actions-card">
-          <div>
-            <span>LES 3 ACTIONS PRIORITAIRES</span>
-            <strong>Avant de prendre une décision</strong>
+        <section className="card acquisition-assistant-card">
+          <div className="acquisition-assistant-head">
+            <div>
+              <span>ASSISTANT D’ACQUISITION</span>
+              <strong>Contrôles avant achat</strong>
+              <p>{verifiedActionsCount} vérification{verifiedActionsCount > 1 ? "s" : ""} sur {priorityActions.length} réalisée{verifiedActionsCount > 1 ? "s" : ""}</p>
+            </div>
+            <div className={`acquisition-progress-badge ${acquisitionReady ? "ready" : ""}`}>
+              <strong>{acquisitionProgress} %</strong>
+              <span>{acquisitionReady ? "Prêt pour une offre" : "À vérifier"}</span>
+            </div>
           </div>
-          <ol>
-            <li>{result.propertyType === "house" ? "Vérifier la toiture, l’humidité et l’assainissement." : "Lire les trois derniers procès-verbaux de copropriété."}</li>
-            <li>Confirmer le loyer de marché avec au moins trois annonces comparables.</li>
-            <li>Vérifier la taxe foncière et les charges réelles avant toute offre.</li>
-          </ol>
+
+          <div className="analysis-progress-track acquisition-track">
+            <i style={{ width: `${acquisitionProgress}%` }} />
+          </div>
+
+          <div className="priority-action-list">
+            {priorityActions.map((action) => {
+              const isOpen = openPriorityAction === action.id;
+              const isChecked = Boolean(checkedActions[action.id]);
+              return (
+                <article className={`priority-action ${isChecked ? "checked" : ""}`} key={action.id}>
+                  <div className="priority-action-main">
+                    <button
+                      type="button"
+                      className={`priority-check ${isChecked ? "checked" : ""}`}
+                      onClick={() => setCheckedActions({
+                        ...checkedActions,
+                        [action.id]: !isChecked
+                      })}
+                      aria-label={isChecked ? "Marquer comme non vérifié" : "Marquer comme vérifié"}
+                    >
+                      {isChecked ? <Check size={16} /> : null}
+                    </button>
+
+                    <div className="priority-action-title">
+                      <div>
+                        <strong>{action.title}</strong>
+                        <span className={`impact-badge ${action.impactTone}`}>Impact {action.impact.toLowerCase()}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="priority-why-button"
+                        onClick={() => setOpenPriorityAction(isOpen ? null : action.id)}
+                      >
+                        Pourquoi et comment ?
+                        <ChevronRight className={isOpen ? "rotated" : ""} size={15} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="priority-action-details">
+                      <div>
+                        <b>Pourquoi c’est important</b>
+                        <ul>{action.why.map((item) => <li key={item}>{item}</li>)}</ul>
+                      </div>
+                      <div>
+                        <b>Comment vérifier</b>
+                        <ul>{action.how.map((item) => <li key={item}>{item}</li>)}</ul>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`verified-action-button ${isChecked ? "checked" : ""}`}
+                    onClick={() => setCheckedActions({
+                      ...checkedActions,
+                      [action.id]: !isChecked
+                    })}
+                  >
+                    {isChecked ? <><CheckCircle2 size={16} /> Vérification effectuée</> : "J’ai vérifié"}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+
+          {acquisitionReady && (
+            <div className="acquisition-ready-banner">
+              <CheckCircle2 size={20} />
+              <div>
+                <strong>Dossier prêt pour une offre</strong>
+                <span>Les contrôles prioritaires et les données financières essentielles sont complétés.</span>
+              </div>
+              <button className="primary" onClick={onExport}><Download size={15} /> Générer le rapport</button>
+            </div>
+          )}
         </section>
 
         <button
