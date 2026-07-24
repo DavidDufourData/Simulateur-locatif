@@ -919,40 +919,6 @@ function estimateRentFromSector(result, sectorRentPerM2) {
 }
 
 
-
-function estimateMissingOwnershipCosts(result) {
-  const surface = Math.max(20, toNumber(result?.surface) || 50);
-  const apartment = result?.propertyType !== "house";
-
-  let monthlyCharges = 0;
-  if (apartment) {
-    let perM2 = 2.15;
-    if (result?.hasElevator) perM2 += 0.25;
-    if (result?.hasParking) perM2 += 0.08;
-    if (result?.hasPool) perM2 += 0.35;
-    if (result?.hasCaretaker) perM2 += 0.3;
-    monthlyCharges = Math.round(surface * perM2 / 5) * 5;
-  }
-
-  const taxPerM2 = result?.propertyType === "house" ? 17 : 14;
-  const propertyTax = Math.round(surface * taxPerM2 / 50) * 50;
-
-  return {
-    monthlyCharges,
-    monthlyChargesLow: apartment ? Math.round(monthlyCharges * 0.78 / 5) * 5 : 0,
-    monthlyChargesHigh: apartment ? Math.round(monthlyCharges * 1.28 / 5) * 5 : 0,
-    propertyTax,
-    propertyTaxLow: Math.round(propertyTax * 0.78 / 50) * 50,
-    propertyTaxHigh: Math.round(propertyTax * 1.28 / 50) * 50
-  };
-}
-
-function dataStatusLabel(detected, sourceLabel = "Annonce") {
-  return detected
-    ? { label: "Confirmée", tone: "confirmed", source: sourceLabel }
-    : { label: "Estimée", tone: "estimated", source: "Estimation prudente Renta" };
-}
-
 function recalculateFinancialAnalysis(result, overrides) {
   if (!result) return null;
 
@@ -1058,7 +1024,6 @@ function AnnouncementAnalysis({ onExport }) {
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const [checkedActions, setCheckedActions] = useState({});
   const [openPriorityAction, setOpenPriorityAction] = useState(null);
-  const [decisionSection, setDecisionSection] = useState("why");
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -1121,11 +1086,10 @@ Loyer estimé : 1 650 € par mois.`;
     const { analysis, usedAI: aiUsed } = await analyzeAnnouncement(input);
     setResult(analysis);
     setUsedAI(aiUsed);
-    const costEstimates = estimateMissingOwnershipCosts(analysis);
     setValidatedRent(analysis.rentDetected ? String(analysis.estimatedRent) : "");
     setFinancialInputs({
-      charges: analysis.propertyType === "house" ? "0" : String(analysis.chargesDetected ? analysis.monthlyCharges : costEstimates.monthlyCharges),
-      propertyTax: String(analysis.propertyTaxDetected ? analysis.propertyTax : costEstimates.propertyTax),
+      charges: analysis.chargesDetected ? String(analysis.monthlyCharges) : "",
+      propertyTax: analysis.propertyTaxDetected ? String(analysis.propertyTax) : "",
       contributionRate: "10",
       interestRate: "3,2",
       durationYears: "25"
@@ -1157,7 +1121,6 @@ Loyer estimé : 1 650 € par mois.`;
     setShowAdvancedDetails(false);
     setCheckedActions({});
     setOpenPriorityAction(null);
-    setDecisionSection("why");
   };
 
   const marketRentEstimate = result
@@ -1330,121 +1293,99 @@ Loyer estimé : 1 650 € par mois.`;
     const verifiedActionsCount = priorityActions.filter((action) => checkedActions[action.id]).length;
     const acquisitionProgress = Math.round(verifiedActionsCount / priorityActions.length * 100);
     const acquisitionReady = verifiedActionsCount === priorityActions.length && liveResult.financialReady;
-    const costEstimates = estimateMissingOwnershipCosts(result);
-    const chargesStatus = dataStatusLabel(result.chargesDetected, "Annonce");
-    const taxStatus = dataStatusLabel(result.propertyTaxDetected, "Annonce");
-    const rentStatus = result.rentDetected
-      ? { label: "Confirmé", tone: "confirmed", source: "Annonce" }
-      : rentSourceStatus === "done"
-      ? { label: "Référence marché", tone: "market", source: "ANIL / carte des loyers" }
-      : { label: "Estimé", tone: "estimated", source: "Estimation secteur" };
-    const essentialData = [
-      Boolean(result.price), Boolean(result.surface), result.city !== "Ville à confirmer",
-      toNumber(validatedRent) > 0, result.propertyType === "house" || toNumber(financialInputs.charges) >= 0,
-      toNumber(financialInputs.propertyTax) > 0
-    ];
-    const confirmedCount = [result.priceDetected !== false && Boolean(result.price), Boolean(result.surface), result.city !== "Ville à confirmer", result.rentDetected, result.chargesDetected || result.propertyType === "house", result.propertyTaxDetected].filter(Boolean).length;
-    const dataConfidence = Math.round(clamp((essentialData.filter(Boolean).length / essentialData.length) * 58 + (confirmedCount / 6) * 42, 42, 98));
-    const missingConfirmationCount = [!result.rentDetected, result.propertyType !== "house" && !result.chargesDetected, !result.propertyTaxDetected].filter(Boolean).length;
-    const canOfferLabel = liveResult.verdict === "ÉVITER" ? "Non" : missingConfirmationCount ? "Oui, après vérification" : "Oui";
-    const canOfferTone = liveResult.verdict === "ÉVITER" ? "avoid" : missingConfirmationCount ? "conditional" : "ready";
-    const decisionSummary = liveResult.verdict === "ACHETER"
-      ? "Le bien mérite d’être approfondi avec les hypothèses actuelles."
-      : liveResult.verdict === "NÉGOCIER"
-      ? `Le projet devient plus équilibré autour de ${liveResult.advisedPrice ? euro(liveResult.advisedPrice) : "un prix négocié"}.`
-      : liveResult.verdict === "ÉVITER"
-      ? "Le rendement estimé ne compense pas suffisamment le prix et les risques."
-      : "Un premier avis est disponible à partir d’hypothèses prudentes.";
-    const quickStrengths = [
-      result.hasParking ? "Stationnement valorisant pour la location" : null,
-      result.hasOutdoor ? "Extérieur favorable à l’attractivité" : null,
-      result.isRenovated ? "État du bien rassurant" : null,
-      liveResult.grossYield >= 5.5 ? "Rendement brut cohérent" : null,
-      result.dpeDetected && ["A","B","C","D"].includes(result.dpe) ? `DPE ${result.dpe} acceptable` : null
-    ].filter(Boolean).slice(0,3);
-    const quickWarnings = [
-      !result.rentDetected ? "Loyer estimé à confirmer" : null,
-      result.propertyType !== "house" && !result.chargesDetected ? "Charges estimées à confirmer" : null,
-      !result.propertyTaxDetected ? "Taxe foncière estimée à confirmer" : null,
-      result.city === "Ville à confirmer" ? "Ville détectée avec incertitude" : null
-    ].filter(Boolean).slice(0,3);
-    const quickRisks = [
-      result.worksDetected ? "Travaux mentionnés dans l’annonce" : null,
-      result.dpeDetected && ["F","G"].includes(result.dpe) ? `DPE ${result.dpe} : contraintes locatives à étudier` : null,
-      liveResult.cashflow < -150 ? "Cash-flow sensiblement négatif" : null
-    ].filter(Boolean).slice(0,3);
 
     return (
       <div className="page-section announcement-page novice-analysis-page">
-        <div className="decision-page-topbar">
-          <button className="decision-back-button" onClick={reset}><ChevronRight size={16} /> Nouvelle annonce</button>
-          <div className="decision-property-label">
-            <span>{result.propertyLabel}{result.rooms ? ` · ${result.rooms} pièces` : ""}</span>
-            <strong>{result.city}{result.surface ? ` · ${result.surface} m²` : ""}</strong>
+        <div className="announcement-result-header simplified-header">
+          <div>
+            <span className="eyebrow"><Sparkles size={13} /> ANALYSE DE L’ANNONCE</span>
+            <h1>
+              {result.city} · {result.propertyLabel}
+              {result.rooms ? ` ${result.rooms} pièces` : ""}
+              {result.surface ? ` · ${result.surface} m²` : ""}
+            </h1>
+            <p>Voici l’essentiel. Les calculs avancés restent accessibles plus bas.</p>
           </div>
-          <button className="decision-export-button" onClick={onExport}><Download size={15} /> Rapport</button>
+          <div className="result-actions">
+            <button className="secondary" onClick={reset}>Nouvelle annonce</button>
+          </div>
         </div>
 
-        <section className={`decision-hero ${liveResult.verdictTone}`}>
-          <div className="decision-hero-main">
-            <span className="decision-kicker">VOTRE DÉCISION EN 30 SECONDES</span>
-            <div className="decision-verdict-line">
-              <span className="decision-light" />
-              <h1>{liveResult.verdict === "À COMPLÉTER" ? "PREMIER AVIS" : liveResult.verdict}</h1>
-            </div>
-            <p>{decisionSummary}</p>
-            <div className={`offer-today ${canOfferTone}`}>
-              <Target size={19} />
-              <div><span>Puis-je faire une offre aujourd’hui ?</span><strong>{canOfferLabel}</strong></div>
-            </div>
+        <section className={`novice-verdict-card ${liveResult.verdictTone}`}>
+          <div className="novice-verdict-copy">
+            <span>VERDICT ACTUEL</span>
+            <strong>{liveResult.verdict === "À COMPLÉTER" ? "Analyse incomplète" : liveResult.verdict}</strong>
+            <p>
+              {liveResult.financialReady
+                ? liveResult.verdict === "ACHETER"
+                  ? "Le projet paraît intéressant avec les hypothèses retenues."
+                  : liveResult.verdict === "NÉGOCIER"
+                  ? "Le bien peut être intéressant, mais le prix mérite d’être négocié."
+                  : "Le niveau de rendement ne compense pas suffisamment les risques."
+                : `Il reste ${missingActions.length} étape${missingActions.length > 1 ? "s" : ""} pour obtenir une analyse financière fiable.`}
+            </p>
           </div>
-          <div className="decision-confidence">
-            <div className="confidence-ring" style={{ "--confidence": `${dataConfidence * 3.6}deg` }}>
-              <div><strong>{dataConfidence}%</strong><span>fiabilité</span></div>
-            </div>
-            <small>{missingConfirmationCount ? `${missingConfirmationCount} donnée${missingConfirmationCount > 1 ? "s" : ""} à confirmer` : "Données essentielles confirmées"}</small>
+          <div className="novice-score">
+            <strong>{liveResult.score ?? completionPercent}</strong>
+            <small>{liveResult.score !== null ? "/100" : "% complet"}</small>
           </div>
         </section>
 
-        <section className="decision-kpi-grid">
-          <article><span>Prix affiché</span><strong>{euro(result.price)}</strong><small className="status confirmed">Confirmé</small></article>
-          <article className="highlight"><span>Offre recommandée</span><strong>{liveResult.advisedPrice ? euro(liveResult.advisedPrice) : "À préciser"}</strong><small>{liveResult.advisedPrice ? `${euro(Math.max(0, result.price-liveResult.advisedPrice))} sous le prix` : "Analyse provisoire"}</small></article>
-          <article><span>Rentabilité nette</span><strong>{liveResult.netYield !== null ? pct(liveResult.netYield) : "—"}</strong><small>{liveResult.netYield >= 4 ? "Potentiel correct" : "À surveiller"}</small></article>
-          <article><span>Cash-flow estimé</span><strong>{liveResult.cashflow !== null ? `${liveResult.cashflow >= 0 ? "+" : ""}${euro(liveResult.cashflow)}/mois` : "—"}</strong><small>{liveResult.cashflow >= 0 ? "Positif" : "Effort mensuel"}</small></article>
+        <section className="card novice-next-step-card">
+          <div className="novice-next-step-icon"><Sparkles size={23} /></div>
+          <div className="novice-next-step-copy">
+            <span>PROCHAINE ÉTAPE CONSEILLÉE</span>
+            <strong>{automaticNextStep}</strong>
+            <p>
+              {missingActions.length
+                ? `À faire : ${missingActions.join(" · ")}.`
+                : "Toutes les données essentielles sont présentes. Vous pouvez consulter le résultat détaillé."}
+            </p>
+          </div>
+          <button className="primary novice-auto-button" onClick={handleAutomaticCompletion}>
+            <Sparkles size={16} />
+            {marketRentEstimate && toNumber(validatedRent) <= 0 ? "Utiliser le loyer estimé" : "Compléter automatiquement"}
+          </button>
         </section>
 
-        <nav className="decision-tabs" aria-label="Sections de l’analyse">
-          <button className={decisionSection === "why" ? "active" : ""} onClick={() => setDecisionSection("why")}>Pourquoi ?</button>
-          <button className={decisionSection === "data" ? "active" : ""} onClick={() => setDecisionSection("data")}>Fiabilité des données</button>
-          <button className={decisionSection === "actions" ? "active" : ""} onClick={() => setDecisionSection("actions")}>Actions prioritaires</button>
-        </nav>
+        <section className="card novice-progress-card">
+          <div className="novice-progress-title">
+            <strong>Analyse {completionPercent} % complétée</strong>
+            <span>{liveResult.financialReady ? "Prête" : "En cours"}</span>
+          </div>
+          <div className="analysis-progress-track"><i style={{ width: `${completionPercent}%` }} /></div>
+          <div className="novice-checklist">
+            <span className={result.price && result.surface ? "done" : ""}>Annonce analysée</span>
+            <span className={marketRentEstimate ? "done" : ""}>Loyer estimé</span>
+            <span className={toNumber(validatedRent) > 0 ? "done" : ""}>Loyer validé</span>
+            <span className={result.propertyType === "house" || String(financialInputs.charges).trim() !== "" ? "done" : ""}>Charges</span>
+            <span className={toNumber(financialInputs.propertyTax) > 0 ? "done" : ""}>Taxe foncière</span>
+          </div>
+        </section>
 
-        {decisionSection === "why" && (
-          <section className="decision-reasons-grid">
-            <article className="decision-reason positive"><header><CheckCircle2 size={18}/><strong>Ce qui est positif</strong></header>{quickStrengths.length ? quickStrengths.map(x=><p key={x}>{x}</p>) : <p>Aucun avantage décisif confirmé pour le moment.</p>}</article>
-            <article className="decision-reason warning"><header><AlertTriangle size={18}/><strong>À confirmer</strong></header>{quickWarnings.length ? quickWarnings.map(x=><p key={x}>{x}</p>) : <p>Les données essentielles sont confirmées.</p>}</article>
-            <article className="decision-reason risk"><header><ShieldCheck size={18}/><strong>Risques détectés</strong></header>{quickRisks.length ? quickRisks.map(x=><p key={x}>{x}</p>) : <p>Aucun risque majeur détecté dans l’annonce.</p>}</article>
-          </section>
-        )}
-
-        {decisionSection === "data" && (
-          <section className="card decision-data-card">
-            <div className="decision-data-intro"><div><span>FIABILITÉ DE L’ANALYSE</span><strong>Chaque estimation reste modifiable</strong></div><p>Les valeurs jaunes servent à obtenir un avis rapide. Elles doivent être remplacées par les chiffres du vendeur avant une offre définitive.</p></div>
-            <div className="decision-data-list">
-              <div><span>Prix</span><strong>{euro(result.price)}</strong><em className="confirmed">Confirmé · annonce</em></div>
-              <div><span>Ville</span><strong>{result.city}</strong><em className={result.city === "Ville à confirmer" ? "estimated" : "confirmed"}>{result.city === "Ville à confirmer" ? "À confirmer" : "Détectée dans l’annonce"}</em></div>
-              <div><span>Loyer</span><strong>{euro(toNumber(validatedRent))}/mois</strong><em className={rentStatus.tone}>{rentStatus.label} · {rentStatus.source}</em></div>
-              {result.propertyType !== "house" && <div><span>Charges</span><strong>{euro(toNumber(financialInputs.charges))}/mois</strong><em className={chargesStatus.tone}>{chargesStatus.label} · {chargesStatus.source}</em>{!result.chargesDetected && <small>Fourchette prudente : {euro(costEstimates.monthlyChargesLow)} à {euro(costEstimates.monthlyChargesHigh)}/mois</small>}</div>}
-              <div><span>Taxe foncière</span><strong>{euro(toNumber(financialInputs.propertyTax))}/an</strong><em className={taxStatus.tone}>{taxStatus.label} · {taxStatus.source}</em>{!result.propertyTaxDetected && <small>Fourchette prudente : {euro(costEstimates.propertyTaxLow)} à {euro(costEstimates.propertyTaxHigh)}/an</small>}</div>
+        {marketRentEstimate && (
+          <section className="card novice-rent-card">
+            <div>
+              <span>LOYER DE MARCHÉ ESTIMÉ</span>
+              <strong>{euro(marketRentEstimate.central)}/mois</strong>
+              <p>Fourchette : {euro(marketRentEstimate.low)} à {euro(marketRentEstimate.high)}/mois</p>
             </div>
-            <div className="estimation-warning"><AlertTriangle size={18}/><p><strong>Analyse non bloquante.</strong> Les charges et la taxe foncière estimées permettent un premier verdict, mais peuvent modifier la rentabilité et le cash-flow une fois les montants réels saisis.</p></div>
+            <button
+              className={toNumber(validatedRent) === marketRentEstimate.central ? "validated" : ""}
+              onClick={() => setValidatedRent(String(marketRentEstimate.central))}
+            >
+              <Check size={15} />
+              {toNumber(validatedRent) === marketRentEstimate.central ? "Loyer retenu" : "Retenir ce loyer"}
+            </button>
           </section>
         )}
 
-        {decisionSection === "actions" && (
-          <section className="decision-actions-preview">
-            <div><span>PROCHAINE ACTION</span><strong>{priorityActions.find(a => !checkedActions[a.id])?.title || "Contrôles prioritaires terminés"}</strong><p>{verifiedActionsCount}/{priorityActions.length} vérifications réalisées</p></div>
-            <button className="primary" onClick={() => document.querySelector('.acquisition-assistant-card')?.scrollIntoView({behavior:'smooth'})}>Ouvrir la checklist <ChevronRight size={16}/></button>
+        {liveResult.financialReady && (
+          <section className="novice-result-grid">
+            <div><span>Rendement brut</span><strong>{pct(liveResult.grossYield)}</strong></div>
+            <div><span>Rendement net</span><strong>{pct(liveResult.netYield)}</strong></div>
+            <div><span>Cash-flow</span><strong>{euro(liveResult.cashflow)}/mois</strong></div>
+            <div><span>Prix conseillé</span><strong>{liveResult.advisedPrice ? euro(liveResult.advisedPrice) : "—"}</strong></div>
           </section>
         )}
 
@@ -1544,7 +1485,7 @@ Loyer estimé : 1 650 € par mois.`;
           className="advanced-details-toggle"
           onClick={() => setShowAdvancedDetails(!showAdvancedDetails)}
         >
-          {showAdvancedDetails ? "Masquer les détails avancés" : "Voir l’analyse complète"}
+          {showAdvancedDetails ? "Masquer les détails avancés" : "Voir le détail du calcul"}
           <ChevronRight className={showAdvancedDetails ? "rotated" : ""} size={17} />
         </button>
 
