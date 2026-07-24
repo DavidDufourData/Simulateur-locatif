@@ -925,6 +925,10 @@ function AnnouncementAnalysis({ onExport }) {
   const [usedAI, setUsedAI] = useState(false);
   const [error, setError] = useState("");
   const [sectorRentPerM2, setSectorRentPerM2] = useState("");
+  const [rentSource, setRentSource] = useState(null);
+  const [rentSourceStatus, setRentSourceStatus] = useState("idle");
+  const [rentSourceError, setRentSourceError] = useState("");
+  const [rentCity, setRentCity] = useState("");
 
   const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
 Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
@@ -935,6 +939,38 @@ Loyer estimé : 1 050 € par mois.`;
 Prix : 285 000 €. Terrain de 180 m² avec cour et garage. Taxe foncière : 1 450 €.
 Chauffage au gaz, raccordée au tout-à-l’égout, toiture révisée. DPE D.
 Loyer estimé : 1 650 € par mois.`;
+
+  const loadOfficialRentReference = async (analysis, cityOverride = "") => {
+    const requestedCity = String(cityOverride || analysis?.city || "").trim();
+    if (!analysis || !requestedCity || requestedCity === "Ville à confirmer" || analysis.propertyType === "unknown") {
+      setRentSourceStatus("idle");
+      return;
+    }
+
+    setRentSourceStatus("loading");
+    setRentSourceError("");
+    try {
+      const response = await fetch("/api/rent-reference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: requestedCity,
+          propertyType: analysis.propertyType,
+          rooms: analysis.rooms || 0
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.rentPerM2) throw new Error(data?.error || "Référence indisponible");
+
+      setSectorRentPerM2(String(data.rentPerM2).replace(".", ","));
+      setRentSource(data);
+      setRentSourceStatus("done");
+    } catch (err) {
+      setRentSource(null);
+      setRentSourceStatus("error");
+      setRentSourceError(err?.message || "Source officielle temporairement indisponible");
+    }
+  };
 
   const analyze = async () => {
     const cleanInput = input.trim();
@@ -956,6 +992,9 @@ Loyer estimé : 1 650 € par mois.`;
     setResult(analysis);
     setUsedAI(aiUsed);
     setStatus("done");
+    const detectedCity = analysis.city === "Ville à confirmer" ? "" : analysis.city;
+    setRentCity(detectedCity);
+    if (detectedCity) loadOfficialRentReference(analysis, detectedCity);
   };
 
   const reset = () => {
@@ -964,6 +1003,10 @@ Loyer estimé : 1 650 € par mois.`;
     setStatus("idle");
     setError("");
     setSectorRentPerM2("");
+    setRentSource(null);
+    setRentSourceStatus("idle");
+    setRentSourceError("");
+    setRentCity("");
   };
 
   const marketRentEstimate = result
@@ -1076,25 +1119,78 @@ Loyer estimé : 1 650 € par mois.`;
         <section className="card rent-market-card">
           <div className="section-title"><span><MapPin size={18} /> Estimation du loyer de marché</span></div>
           <p className="rent-market-intro">
-            Saisissez le loyer moyen observé dans le secteur pour un bien comparable. 
-            Renta Locative l’ajuste selon la surface, le type de bien, l’état et les prestations.
+            La référence communale est recherchée automatiquement dans la Carte des loyers 2025 publiée par l’ANIL et le ministère du Logement.
+            Elle est ensuite ajustée selon les caractéristiques détectées dans l’annonce.
           </p>
 
-          <div className="sector-rent-input">
+          <div className="rent-city-search">
             <label>
-              Référence du secteur
+              Commune du bien
               <span>
                 <input
-                  value={sectorRentPerM2}
-                  onChange={(event) => setSectorRentPerM2(event.target.value)}
-                  inputMode="decimal"
-                  placeholder="Ex. 18"
+                  value={rentCity}
+                  onChange={(event) => setRentCity(event.target.value)}
+                  placeholder="Ex. Épinay-sur-Orge"
                 />
-                <b>€/m²/mois</b>
+                <button
+                  onClick={() => loadOfficialRentReference(result, rentCity)}
+                  disabled={!rentCity.trim() || rentSourceStatus === "loading"}
+                >
+                  Rechercher
+                </button>
               </span>
             </label>
-            <small>Cette valeur doit provenir d’annonces comparables ou d’une source locale récente.</small>
+            <small>La commune est modifiable si elle n’est pas clairement présente dans l’annonce.</small>
           </div>
+
+          <div className={`official-rent-source source-${rentSourceStatus}`}>
+            {rentSourceStatus === "loading" && (
+              <><RefreshCw className="source-spinner" size={18} /><div><b>Recherche de la référence officielle…</b><span>{result.city} · {result.propertyLabel}</span></div></>
+            )}
+            {rentSourceStatus === "done" && rentSource && (
+              <>
+                <ShieldCheck size={19} />
+                <div>
+                  <b>{rentSource.rentPerM2} €/m²/mois charges comprises</b>
+                  <span>{rentSource.typologyLabel} · {rentSource.cityLabel || result.city} · données {rentSource.year}</span>
+                  <small>Source : {rentSource.sourceLabel}</small>
+                </div>
+                <a href={rentSource.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Source</a>
+              </>
+            )}
+            {rentSourceStatus === "error" && (
+              <>
+                <AlertTriangle size={18} />
+                <div><b>Référence officielle non récupérée</b><span>{rentSourceError}</span></div>
+                <button onClick={() => loadOfficialRentReference(result, rentCity)}>Réessayer</button>
+              </>
+            )}
+            {rentSourceStatus === "idle" && (
+              <><MapPin size={18} /><div><b>Commune à confirmer</b><span>La ville doit être détectée pour interroger la source officielle.</span></div></>
+            )}
+          </div>
+
+          <details className="manual-rent-fallback">
+            <summary>Saisir une autre référence locale</summary>
+            <div className="sector-rent-input">
+              <label>
+                Référence personnalisée
+                <span>
+                  <input
+                    value={sectorRentPerM2}
+                    onChange={(event) => {
+                      setSectorRentPerM2(event.target.value);
+                      setRentSource(null);
+                    }}
+                    inputMode="decimal"
+                    placeholder="Ex. 18"
+                  />
+                  <b>€/m²/mois</b>
+                </span>
+              </label>
+              <small>Cette valeur remplace la référence officielle et doit être justifiée par des comparables récents.</small>
+            </div>
+          </details>
 
           {marketRentEstimate ? (
             <div className="market-rent-result">
@@ -1103,6 +1199,11 @@ Loyer estimé : 1 650 € par mois.`;
                 <strong>{euro(marketRentEstimate.central)}<small>/mois</small></strong>
                 <p>Fourchette prudente : {euro(marketRentEstimate.low)} à {euro(marketRentEstimate.high)}/mois</p>
                 <em>Confiance {marketRentEstimate.confidence}</em>
+                <small className="market-source-caption">
+                  {rentSource
+                    ? `Base communale officielle : ${rentSource.rentPerM2} €/m² CC`
+                    : "Base personnalisée renseignée manuellement"}
+                </small>
               </div>
               <div className="market-rent-factors">
                 <b>Ajustements appliqués</b>
@@ -1119,14 +1220,14 @@ Loyer estimé : 1 650 € par mois.`;
             <div className="analysis-unavailable">
               <MapPin size={18} />
               <div>
-                <b>Référence sectorielle nécessaire</b>
-                <span>L’application n’invente pas le prix au m² du quartier. Renseignez une référence locale récente pour obtenir l’estimation.</span>
+                <b>Référence sectorielle indisponible</b>
+                <span>La source officielle n’a fourni aucune valeur exploitable. Vous pouvez saisir une référence locale justifiée.</span>
               </div>
             </div>
           )}
 
           <p className="rent-estimate-warning">
-            Estimation distincte des données de l’annonce. Elle ne remplace pas une étude de biens comparables réellement disponibles.
+            Indicateur communal de loyers d’annonce, charges comprises et non meublés. Il ne constitue ni un loyer garanti ni un comparable exact.
           </p>
         </section>
 

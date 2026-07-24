@@ -1449,3 +1449,52 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
   .sector-rent-input{max-width:none}
   .market-rent-main strong{font-size:30px}
 }
+
+
+/* V21 — référence locative officielle ANIL / Carte des loyers */
+.official-rent-source{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:11px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card-soft);
+}
+.official-rent-source>svg{color:var(--blue)}
+.official-rent-source>div b,.official-rent-source>div span,.official-rent-source>div small{display:block}
+.official-rent-source>div b{font-size:13px}
+.official-rent-source>div span{margin-top:3px;color:var(--muted);font-size:11px}
+.official-rent-source>div small{margin-top:5px;color:var(--muted);font-size:9px}
+.official-rent-source a,.official-rent-source button{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 9px;border:1px solid var(--line);border-radius:9px;
+  background:var(--card);color:var(--blue);font-size:10px;font-weight:800;text-decoration:none;
+}
+.official-rent-source.source-done{border-color:rgba(24,168,124,.3);background:rgba(24,168,124,.06)}
+.official-rent-source.source-done>svg{color:var(--green)}
+.official-rent-source.source-error{border-color:rgba(220,83,100,.3)}
+.official-rent-source.source-error>svg{color:var(--red)}
+.source-spinner{animation:source-spin 1s linear infinite}
+@keyframes source-spin{to{transform:rotate(360deg)}}
+.manual-rent-fallback{border-top:1px solid var(--line);padding-top:11px}
+.manual-rent-fallback summary{cursor:pointer;color:var(--muted);font-size:11px;font-weight:700}
+.manual-rent-fallback .sector-rent-input{margin-top:12px}
+.market-source-caption{display:block;margin-top:9px;color:var(--muted);font-size:9px;line-height:1.4}
+@media(max-width:780px){
+  .official-rent-source{grid-template-columns:auto 1fr}
+  .official-rent-source a,.official-rent-source button{grid-column:2;width:max-content}
+}
+
+.rent-city-search{display:grid;gap:6px;max-width:520px}
+.rent-city-search label{display:grid;gap:7px;font-size:12px;font-weight:700}
+.rent-city-search label>span{display:flex;border:1px solid var(--line);border-radius:13px;background:var(--card-soft);overflow:hidden}
+.rent-city-search input{min-width:0;flex:1;padding:12px 13px;border:0;background:transparent;color:var(--ink);outline:none}
+.rent-city-search button{padding:0 14px;border:0;border-left:1px solid var(--line);background:var(--card);color:var(--blue);font-size:11px;font-weight:800}
+.rent-city-search button:disabled{opacity:.5}
+.rent-city-search small{color:var(--muted);font-size:10px}
+@media(max-width:480px){
+  .rent-city-search label>span{display:grid}
+  .rent-city-search button{padding:11px;border-left:0;border-top:1px solid var(--line)}
+}

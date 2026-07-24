@@ -1,48 +1,69 @@
-RENTA LOCATIVE V20 — ESTIMATION DU LOYER PAR LE SECTEUR
+RENTA LOCATIVE V21 — ESTIMATION DU LOYER AVEC SOURCE OFFICIELLE
 
-OBJECTIF
-Permettre une estimation locative sans transformer une hypothèse en donnée détectée.
+SOURCE PRINCIPALE
+Carte des loyers 2025 publiée par l’ANIL et le ministère du Logement sur data.gouv.fr.
 
-PRINCIPE
-L’utilisateur renseigne une référence locale récente en €/m²/mois, issue :
-- d’annonces comparables ;
-- d’une étude locale ;
-- d’un observatoire ;
-- d’un professionnel immobilier.
+Mention obligatoire de la source :
+« Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin »
 
-Renta Locative applique ensuite des ajustements transparents selon :
-- appartement ou maison ;
-- surface et effet de volume ;
-- état rénové ou travaux ;
-- parking ou garage ;
-- balcon, terrasse, jardin ou terrain ;
-- DPE lorsqu’il est réellement indiqué.
+DONNÉES UTILISÉES
+- indicateur communal de loyer d’annonce ;
+- charges comprises ;
+- logement non meublé ;
+- biens types mis en location au 3e trimestre 2025 ;
+- référence différente selon :
+  - appartement T1-T2 ;
+  - appartement T3 et plus ;
+  - appartement toutes typologies ;
+  - maison.
 
-RÉSULTAT
-L’application affiche :
-- un loyer central estimé ;
-- une fourchette prudente de ±6 % ;
-- le détail des ajustements ;
-- un niveau de confiance ;
-- un avertissement clair indiquant qu’il s’agit d’une estimation.
+FONCTIONNEMENT
+1. L’application détecte la commune et le type de bien.
+2. Elle appelle /api/rent-reference.
+3. L’API télécharge la ressource CSV officielle correspondant à la typologie.
+4. Elle recherche la commune.
+5. Elle renvoie le loyer officiel en €/m²/mois et les indicateurs de qualité disponibles.
+6. Le moteur applique ensuite des ajustements transparents liés au bien.
 
-RÈGLE DE CONFIANCE CONSERVÉE
-- Les données de l’annonce restent séparées.
-- Les charges, la taxe foncière et le loyer ne sont jamais inventés.
-- Le prix moyen du secteur n’est pas créé automatiquement.
-- Sans référence sectorielle, l’application affiche « Référence sectorielle nécessaire ».
+TRANSPARENCE
+L’écran affiche :
+- la valeur communale officielle ;
+- l’année ;
+- la typologie retenue ;
+- la source exacte ;
+- un lien vers data.gouv.fr ;
+- le loyer central estimé ;
+- la fourchette ;
+- chaque ajustement appliqué.
 
-EXEMPLE
-Référence locale : 18 €/m²/mois
-Surface : 72 m²
-Surface familiale : -4,5 %
-Balcon : +4 %
-Parking : +4 %
-DPE favorable : +2,5 %
+SÉCURITÉ
+- Aucun chiffre sectoriel n’est inventé.
+- Si la commune n’est pas trouvée ou si la source est indisponible, aucun loyer automatique n’est affiché.
+- Une saisie manuelle reste possible comme solution de secours.
+- La commune peut être corrigée si elle n’est pas présente dans l’annonce.
 
-Le moteur calcule une estimation argumentée et non une fausse donnée factuelle.
+PRÉCAUTIONS
+La donnée officielle est un indicateur communal de loyer d’annonce charges comprises.
+Elle ne constitue pas un loyer garanti, un loyer réellement signé ou un comparable exact.
+Les indicateurs doivent être interprétés avec prudence lorsque le nombre d’observations ou le R² est faible.
+
+NOUVEAU FICHIER
+- api/rent-reference.js
 
 FICHIERS À REMPLACER
 - App.jsx
 - styles.css
 - api/investor-radar.js
+
+FICHIER À AJOUTER
+- api/rent-reference.js
+
+RESSOURCES DATA.GOUV UTILISÉES
+- Appartement toutes typologies :
+  55b34088-0964-415f-9df7-d87dd98a09be
+- Appartement T1-T2 :
+  14a1fe11-b2d1-49b3-9f6b-83d12df9482c
+- Appartement T3 et plus :
+  5e3b28a4-cf56-43a3-ae79-43cceeb27f8c
+- Maison :
+  129f764d-b613-44e4-952c-5ff50a8c9b73
