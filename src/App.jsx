@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart3, Building2, Calculator, Check, ChevronRight, CircleDollarSign,
   Crown, Download, Gauge, Home, LineChart, Moon, Plus, Save, Scale,
-  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search
+  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search,
+  Newspaper, BookOpen, Landmark, RefreshCw, ShieldCheck, Clock3, ExternalLink, Activity, MapPin
 } from "lucide-react";
 
 const PREMIUM_STORAGE_KEY = "renta-v7-premium";
@@ -1078,6 +1079,229 @@ function PremiumCheckout({ open, onClose, onSuccess }) {
   );
 }
 
+
+const RADAR_FALLBACK = {
+  status: "demo",
+  updatedAt: null,
+  marketMood: {
+    label: "Connexion des sources en attente",
+    summary: "La page est prête. Les données publiques seront affichées dès que l’API Radar sera connectée.",
+    confidence: null
+  },
+  indicators: [
+    { label: "Crédit", value: "À connecter", trend: "neutral", note: "Source attendue : Banque de France" },
+    { label: "Prix", value: "À connecter", trend: "neutral", note: "Source attendue : Insee / DVF" },
+    { label: "Location", value: "À connecter", trend: "neutral", note: "Données locales à configurer" },
+    { label: "Fiscalité", value: "Veille active", trend: "neutral", note: "Sources officielles uniquement" }
+  ],
+  news: [
+    {
+      id: "welcome",
+      category: "Fonctionnement",
+      title: "Votre veille immobilière fiable et traçable",
+      summary: "Le Radar rassemble les informations utiles à l’investisseur et distingue clairement les règles applicables, les textes en discussion et les analyses.",
+      impact: "Vous obtenez une information courte, datée et accompagnée de sa source.",
+      action: "Connecter l’API Radar pour activer les mises à jour automatiques.",
+      sourceName: "Renta Locative",
+      sourceUrl: "",
+      sourceDate: "",
+      status: "analysis",
+      confidence: "—"
+    }
+  ],
+  tutorials: [
+    { title: "Calculer une rentabilité réellement comparable", duration: "4 min", level: "Essentiel", topic: "Rentabilité" },
+    { title: "Lire les trois documents clés d’une copropriété", duration: "6 min", level: "Pratique", topic: "Copropriété" },
+    { title: "Vérifier un projet LMNP avant de signer", duration: "5 min", level: "Fiscalité", topic: "LMNP" }
+  ],
+  caseStudy: {
+    title: "Étude de cas personnalisée",
+    city: "À partir de vos projets",
+    score: null,
+    summary: "Le Radar pourra transformer vos données enregistrées en étude de cas : financement, rendement, risques et marge de négociation.",
+    action: "Enregistrez au moins un projet pour obtenir une analyse contextualisée."
+  }
+};
+
+function RadarStatusBadge({ status }) {
+  const map = {
+    official: ["OFFICIEL", "official"],
+    applicable: ["APPLICABLE", "official"],
+    discussion: ["EN DISCUSSION", "discussion"],
+    proposal: ["PROJET / ANNONCE", "proposal"],
+    analysis: ["ANALYSE", "analysis"]
+  };
+  const [label, className] = map[status] || map.analysis;
+  return <span className={`radar-status ${className}`}>{label}</span>;
+}
+
+function InvestorRadar({ projects }) {
+  const [data, setData] = useState(RADAR_FALLBACK);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+
+  const loadRadar = async () => {
+    setLoading(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/investor-radar", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`API ${response.status}`);
+      const payload = await response.json();
+      if (!payload || !Array.isArray(payload.news) || !Array.isArray(payload.indicators)) {
+        throw new Error("Format de données invalide");
+      }
+      setData(payload);
+    } catch {
+      setData(RADAR_FALLBACK);
+      setNotice("Mode démonstration : l’API autonome n’est pas encore déployée.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadRadar(); }, []);
+
+  const updatedLabel = data.updatedAt
+    ? new Date(data.updatedAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })
+    : "Sources non connectées";
+
+  const projectCount = projects.length;
+  const activeProject = projects[0];
+  const activeCalc = activeProject ? calculate(activeProject) : null;
+
+  return (
+    <div className="page-section radar-page">
+      <section className="radar-hero">
+        <div>
+          <span className="eyebrow"><Activity size={14} /> RADAR INVESTISSEUR PREMIUM</span>
+          <h1>Comprenez le marché. Décidez avec des faits.</h1>
+          <p>Actualités, fiscalité, tendances et tutoriels traduits en conséquences concrètes pour vos investissements.</p>
+          <div className="radar-meta">
+            <span><Clock3 size={15} /> Mise à jour : {updatedLabel}</span>
+            <span><ShieldCheck size={15} /> Sources datées et traçables</span>
+          </div>
+        </div>
+        <div className="radar-mood">
+          <span>Lecture du marché</span>
+          <strong>{data.marketMood?.label || "Analyse en cours"}</strong>
+          <p>{data.marketMood?.summary}</p>
+          {data.marketMood?.confidence != null && <small>Indice de confiance : {data.marketMood.confidence}%</small>}
+        </div>
+      </section>
+
+      {notice && <div className="radar-notice"><AlertTriangle size={17} /> {notice}</div>}
+
+      <div className="radar-toolbar">
+        <div>
+          <b>Votre briefing investisseur</b>
+          <span>{loading ? "Actualisation en cours…" : `${data.news.length} information(s) analysée(s)`}</span>
+        </div>
+        <button className="secondary" onClick={loadRadar} disabled={loading}>
+          <RefreshCw size={16} className={loading ? "spin" : ""} /> Actualiser
+        </button>
+      </div>
+
+      <div className="radar-indicators">
+        {data.indicators.map((item, index) => (
+          <article className="radar-indicator" key={`${item.label}-${index}`}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.note}</small>
+          </article>
+        ))}
+      </div>
+
+      <div className="radar-layout">
+        <section className="radar-main">
+          <div className="section-title">
+            <span><Newspaper size={18} /> À retenir maintenant</span>
+          </div>
+          <div className="radar-news-list">
+            {data.news.map((item, index) => (
+              <article className="radar-news-card card" key={item.id || index}>
+                <div className="radar-news-top">
+                  <div>
+                    <span className="radar-category">{item.category}</span>
+                    <h2>{item.title}</h2>
+                  </div>
+                  <RadarStatusBadge status={item.status} />
+                </div>
+                <p className="radar-summary">{item.summary}</p>
+                <div className="radar-decision-grid">
+                  <div><span>Impact investisseur</span><p>{item.impact}</p></div>
+                  <div><span>Action recommandée</span><p>{item.action}</p></div>
+                </div>
+                <footer>
+                  <span>
+                    <ShieldCheck size={14} />
+                    {item.sourceName || "Source non renseignée"}
+                    {item.sourceDate ? ` · ${item.sourceDate}` : ""}
+                  </span>
+                  {item.sourceUrl && (
+                    <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+                      Consulter la source <ExternalLink size={13} />
+                    </a>
+                  )}
+                </footer>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <aside className="radar-side">
+          <section className="card radar-personal">
+            <div className="section-title"><span><Sparkles size={18} /> Impact sur vos projets</span></div>
+            {activeProject && activeCalc ? (
+              <>
+                <span className="radar-project-name">{activeProject.name}</span>
+                <strong>{activeCalc.score}/100</strong>
+                <p>{activeCalc.monthlyCashflow >= 0
+                  ? `Cash-flow estimé positif de ${euro(activeCalc.monthlyCashflow)} par mois avant fiscalité définitive.`
+                  : `Cash-flow estimé négatif de ${euro(Math.abs(activeCalc.monthlyCashflow))} par mois avant fiscalité définitive.`}</p>
+                <small>{projectCount} projet(s) pourront être croisés avec les futures actualités.</small>
+              </>
+            ) : (
+              <div className="radar-empty-mini">
+                <Building2 size={28} />
+                <b>Aucun projet enregistré</b>
+                <p>Ajoutez un projet pour contextualiser les tendances du marché.</p>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <div className="section-title"><span><BookOpen size={18} /> Académie investisseur</span></div>
+            <div className="radar-tutorials">
+              {data.tutorials.map((tutorial, index) => (
+                <button key={`${tutorial.title}-${index}`}>
+                  <div><span>{tutorial.topic}</span><b>{tutorial.title}</b></div>
+                  <small>{tutorial.duration} · {tutorial.level}</small>
+                  <ChevronRight size={17} />
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="card radar-case">
+            <div className="section-title"><span><Landmark size={18} /> Projet analysé</span></div>
+            <span><MapPin size={14} /> {data.caseStudy.city}</span>
+            <h3>{data.caseStudy.title}</h3>
+            {data.caseStudy.score != null && <strong>{data.caseStudy.score}/100</strong>}
+            <p>{data.caseStudy.summary}</p>
+            <small>{data.caseStudy.action}</small>
+          </section>
+        </aside>
+      </div>
+
+      <div className="radar-disclaimer">
+        <ShieldCheck size={17} />
+        <p><b>Principe de fiabilité :</b> aucune information fiscale ou réglementaire n’est présentée comme applicable sans source, date et statut. Les contenus sont informatifs et ne remplacent pas un conseil juridique, fiscal ou financier personnalisé.</p>
+      </div>
+    </div>
+  );
+}
+
+
 export default function App() {
   const [page, setPage] = useState("dashboard");
   const [dark, setDark] = useState(false);
@@ -1193,6 +1417,7 @@ export default function App() {
     ["simulator", "Simulateur", <Calculator size={18} />],
     ["portfolio", "Mes biens", <Building2 size={18} />],
     ["announcement", "Analyse annonce", <Sparkles size={18} />],
+    ["radar", "Radar marché", <Newspaper size={18} />],
     ["goals", "Objectifs", <Target size={18} />],
     ["compare", "Comparer", <Scale size={18} />]
   ];
@@ -1216,7 +1441,7 @@ export default function App() {
             >
               {icon}<span>{label}</span>
               {id === "portfolio" && <em>{projects.length}</em>}
-              {!isPremium && ["announcement", "compare", "goals"].includes(id) && <Crown className="nav-premium-icon" size={13} />}
+              {!isPremium && ["announcement", "compare", "goals", "radar"].includes(id) && <Crown className="nav-premium-icon" size={13} />}
             </button>
           ))}
         </nav>
@@ -1286,6 +1511,7 @@ export default function App() {
               <button className="quick-premium featured-ai" onClick={() => setPage("announcement")}><Sparkles /><b>Analyser une annonce <Crown size={13} /></b><span>Obtenez un score, un verdict et un prix conseillé.</span></button>
               <button className={!isPremium ? "quick-premium" : ""} onClick={() => setPage("compare")}><Scale /><b>Comparer deux projets {!isPremium && <Crown size={13} />}</b><span>Repérez le meilleur équilibre global.</span></button>
               <button className={!isPremium ? "quick-premium" : ""} onClick={() => setPage("goals")}><Target /><b>Suivre vos objectifs {!isPremium && <Crown size={13} />}</b><span>Visualisez votre progression patrimoniale.</span></button>
+              <button className={!isPremium ? "quick-premium radar-quick" : "radar-quick"} onClick={() => setPage("radar")}><Newspaper /><b>Radar investisseur {!isPremium && <Crown size={13} />}</b><span>Actualités, fiscalité et tendances traduites en décisions concrètes.</span></button>
             </div>
           </div>
         )}
@@ -1308,6 +1534,27 @@ export default function App() {
                   <div className="announcement-gate-preview">
                     <div className="mini-score"><strong>82</strong><small>/100</small></div>
                     <div><b>Verdict : NÉGOCIER</b><span>Prix conseillé : 198 000 €</span></div>
+                  </div>
+                }
+                onUnlock={() => setCheckoutOpen(true)}
+              />
+        )}
+        {page === "radar" && (
+          isPremium
+            ? <InvestorRadar projects={projects} />
+            : <PremiumGate
+                title="Accédez au Radar investisseur"
+                description="Recevez une veille immobilière structurée, sourcée et traduite en conséquences concrètes pour vos projets."
+                features={[
+                  "Tendances du crédit, des prix et du marché locatif",
+                  "Veille fiscale et réglementaire avec statut clair",
+                  "Tutoriels pratiques et études de cas",
+                  "Impact personnalisé sur vos projets enregistrés"
+                ]}
+                preview={
+                  <div className="radar-gate-preview">
+                    <div><Activity size={22} /><b>Marché & fiscalité</b><span>Mise à jour automatique</span></div>
+                    <div><ShieldCheck size={22} /><b>Sources vérifiées</b><span>Datées et traçables</span></div>
                   </div>
                 }
                 onUnlock={() => setCheckoutOpen(true)}
