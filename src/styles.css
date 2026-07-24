@@ -1354,3 +1354,69 @@ legend{padding-right:9px;color:var(--blue);font-size:11px;font-weight:800}
   .analysis-proof span{font-size:11px}
   .profile-hero h1{font-size:20px}
 }
+
+
+/* V18 — analyse distincte appartement / maison */
+.analysis-confidence{
+  display:inline-flex;
+  flex-wrap:wrap;
+  gap:4px;
+  margin-top:10px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:var(--card-soft);
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+}
+.analysis-confidence.confidence-élevée{background:rgba(24,168,124,.1);color:var(--green)}
+.analysis-confidence.confidence-moyenne{background:rgba(221,139,37,.12);color:#b66e15}
+.analysis-confidence.confidence-faible{background:rgba(220,83,100,.1);color:var(--red)}
+.demo-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.verdict.incomplete,
+.verdict-badge.incomplete{
+  background:rgba(113,128,151,.12);
+  color:var(--muted);
+}
+@media(max-width:780px){
+  .demo-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}
+  .demo-buttons button{justify-content:center;padding-left:8px;padding-right:8px;font-size:11px}
+  .analysis-confidence{border-radius:12px;line-height:1.4}
+}
+@media(max-width:440px){
+  .demo-buttons{grid-template-columns:1fr}
+}
+
+
+/* V19 — confiance : aucune donnée inventée */
+.trusted-data-grid>div{position:relative}
+.trusted-data-grid small{
+  display:inline-flex;
+  width:max-content;
+  margin-top:8px;
+  padding:4px 7px;
+  border-radius:999px;
+  background:rgba(24,168,124,.1);
+  color:var(--green);
+  font-size:9px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.trusted-data-grid div:has(b:is(:only-child)) small{background:var(--card-soft);color:var(--muted)}
+.analysis-unavailable{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:16px;
+  border:1px dashed var(--line);
+  border-radius:14px;
+  background:var(--card-soft);
+}
+.analysis-unavailable svg{flex:0 0 auto;color:var(--orange)}
+.analysis-unavailable b,.analysis-unavailable span{display:block}
+.analysis-unavailable span{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.45}
+.ai-verdict.incomplete .ai-score-ring{opacity:.65}
+@media(max-width:780px){
+  .trusted-data-grid small{font-size:8px}
+}

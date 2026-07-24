@@ -531,32 +531,52 @@ function Goals({ projects, isPremium, onPremiumClick }) {
 
 
 
+
 function extractListingFields(text) {
-  const normalized = text.replace(/\u00a0/g, " ");
+  const normalized = String(text || "").replace(/\u00a0/g, " ");
+  const lower = normalized.toLocaleLowerCase("fr-FR");
 
-  const priceMatches = [...normalized.matchAll(/(\d{2,3}(?:[\s.]\d{3})+|\d{5,6})\s*€?/g)]
+  const isHouse = /\b(maison|pavillon|villa|long[eè]re|corps de ferme|maison de ville|mitoyenne)\b/i.test(normalized);
+  const isApartment = /\b(appartement|studio|duplex|loft|t[1-9]|f[1-9])\b/i.test(normalized);
+  const propertyType = isHouse ? "house" : isApartment ? "apartment" : "unknown";
+
+  const priceMatches = [...normalized.matchAll(/(\d{2,3}(?:[\s.]\d{3})+|\d{5,7})\s*€?/g)]
     .map((match) => toNumber(match[1]))
-    .filter((value) => value >= 30000 && value <= 2000000);
-  const price = priceMatches[0] || 215000;
+    .filter((value) => value >= 30000 && value <= 3000000);
+  const price = priceMatches[0] || 0;
 
-  const surfaceMatch = normalized.match(/(\d{2,3}(?:[,.]\d+)?)\s*m[²2]/i);
-  const surface = surfaceMatch ? toNumber(surfaceMatch[1]) : 48;
+  const livingSurfaceMatch =
+    normalized.match(/(?:surface habitable|habitable|surface)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d+)?)\s*m[²2]/i) ||
+    normalized.match(/(\d{2,3}(?:[,.]\d+)?)\s*m[²2]\s*(?:habitables?|hab\.)/i) ||
+    normalized.match(/(\d{2,3}(?:[,.]\d+)?)\s*m[²2]/i);
+  const surface = livingSurfaceMatch ? toNumber(livingSurfaceMatch[1]) : 0;
+
+  const landMatch =
+    normalized.match(/(?:terrain|parcelle|jardin)\s*(?:de|:)?\s*(\d{2,5}(?:[,.]\d+)?)\s*m[²2]/i) ||
+    normalized.match(/(\d{2,5}(?:[,.]\d+)?)\s*m[²2]\s+de\s+(?:terrain|parcelle|jardin)/i);
+  const landSurface = landMatch ? toNumber(landMatch[1]) : 0;
 
   const rentMatch =
-    normalized.match(/loyer(?:\s+(?:estimé|mensuel))?\s*[:\-]?\s*(\d{3,5})\s*€/i) ||
-    normalized.match(/lou[ée]\s*(\d{3,5})\s*€/i);
-  const estimatedRent = rentMatch
-    ? toNumber(rentMatch[1])
-    : Math.round(Math.max(550, Math.min(2200, surface * 18)));
+    normalized.match(/loyer(?:\s+(?:estimé|mensuel|actuel|hors charges))?\s*[:\-]?\s*(\d{3,5})\s*€/i) ||
+    normalized.match(/lou[ée]\s*(?:à)?\s*(\d{3,5})\s*€/i);
+  const estimatedRent = rentMatch ? toNumber(rentMatch[1]) : 0;
 
-  const chargesMatch = normalized.match(/charges?\s*[:\-]?\s*(\d{2,5})\s*€(?:\s*\/\s*mois)?/i);
-  const monthlyCharges = chargesMatch ? toNumber(chargesMatch[1]) : Math.round(surface * 2.1);
+  const chargesMatch =
+    normalized.match(/charges?\s+(?:de copropriété|copropri[eé]t[eé])\s*[:\-]?\s*(\d{1,5})\s*€(?:\s*\/\s*mois)?/i) ||
+    normalized.match(/charges?\s*[:\-]?\s*(\d{1,5})\s*€(?:\s*\/\s*mois)?/i);
+  let monthlyCharges = chargesMatch ? toNumber(chargesMatch[1]) : 0;
+  if (chargesMatch && /(?:par an|annuel|an)\b/i.test(chargesMatch[0])) monthlyCharges = Math.round(monthlyCharges / 12);
 
   const taxMatch = normalized.match(/taxe fonci[eè]re\s*[:\-]?\s*(\d{2,5})\s*€/i);
-  const propertyTax = taxMatch ? toNumber(taxMatch[1]) : Math.round(surface * 18);
+  const propertyTax = taxMatch ? toNumber(taxMatch[1]) : 0;
 
-  const roomMatch = normalized.match(/(?:t|f)\s?(\d)/i) || normalized.match(/(\d)\s*pi[eè]ces?/i);
-  const rooms = roomMatch ? Number(roomMatch[1]) : surface < 30 ? 1 : surface < 55 ? 2 : 3;
+  const roomMatch =
+    normalized.match(/(?:t|f)\s?(\d{1,2})\b/i) ||
+    normalized.match(/(\d{1,2})\s*pi[eè]ces?\b/i);
+  const rooms = roomMatch ? Number(roomMatch[1]) : 0;
+
+  const bedroomMatch = normalized.match(/(\d{1,2})\s*chambres?\b/i);
+  const bedrooms = bedroomMatch ? Number(bedroomMatch[1]) : 0;
 
   const cityPatterns = [
     /(?:à|sur la commune de|situ[ée]\s+à)\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ' -]{2,35})/i,
@@ -571,117 +591,238 @@ function extractListingFields(text) {
     }
   }
 
-  const hasWorks = /(travaux|à rénover|rafraîchir|rénovation|électricité à refaire|toiture)/i.test(normalized);
+  const hasWorks = /(travaux|à rénover|rafraîchir|rénovation|électricité à refaire|toiture à refaire|assainissement à refaire)/i.test(normalized);
   const isRenovated = /(rénové|refait à neuf|aucun travaux|excellent état)/i.test(normalized);
   const hasElevator = /ascenseur/i.test(normalized);
-  const hasParking = /(parking|garage|stationnement)/i.test(normalized);
-  const hasBalcony = /(balcon|terrasse|jardin)/i.test(normalized);
+  const hasParking = /(parking|garage|stationnement|carport)/i.test(normalized);
+  const hasOutdoor = /(balcon|terrasse|jardin|cour|terrain)/i.test(normalized);
   const rented = /(vendu loué|locataire en place|actuellement loué)/i.test(normalized);
   const dpeMatch = normalized.match(/dpe\s*[:\-]?\s*([a-g])/i);
-  const dpe = dpeMatch ? dpeMatch[1].toUpperCase() : "D";
+  const dpe = dpeMatch ? dpeMatch[1].toUpperCase() : "NC";
+
+  const hasCopro = /(copropri[eé]t[eé]|syndic|charges de copro|lotissement avec charges)/i.test(normalized);
+  const roofMentioned = /(toiture|couverture|charpente)/i.test(normalized);
+  const roofConcern = /(toiture à refaire|toiture ancienne|charpente à reprendre|infiltration)/i.test(normalized);
+  const heatingMentioned = /(chauffage|chaudi[eè]re|pompe à chaleur|radiateurs?|po[eê]le)/i.test(normalized);
+  const sanitationMentioned = /(tout[- ]à[- ]l['’]égout|assainissement|fosse septique|fosse toutes eaux)/i.test(normalized);
+  const septicTank = /(fosse septique|fosse toutes eaux|assainissement individuel)/i.test(normalized);
+  const facadeConcern = /(fissure|façade à refaire|ravalement à prévoir|humidité|remontées capillaires)/i.test(normalized);
+  const isDetached = /(individuelle|indépendante|sans mitoyenneté|non mitoyenne)/i.test(normalized);
+  const isSemiDetached = /(mitoyenne|mitoyenneté)/i.test(normalized);
+  const hasOutbuilding = /(dépendance|grange|atelier|abri|cave|grenier|combles aménageables)/i.test(normalized);
+
+  const missing = [];
+  if (!price) missing.push("prix");
+  if (!surface) missing.push("surface habitable");
+  if (!estimatedRent) missing.push("loyer estimé ou actuel");
+  if (!propertyTax) missing.push("taxe foncière");
+  if (dpe === "NC") missing.push("DPE");
+  if (propertyType === "unknown") missing.push("type de bien");
 
   return {
-    price, surface, estimatedRent, monthlyCharges, propertyTax, rooms, city, dpe,
-    hasWorks, isRenovated, hasElevator, hasParking, hasBalcony, rented,
+    propertyType, price, surface, landSurface, estimatedRent, monthlyCharges, propertyTax,
+    rooms, bedrooms, city, dpe, hasWorks, isRenovated, hasElevator, hasParking,
+    hasOutdoor, rented, hasCopro, roofMentioned, roofConcern, heatingMentioned,
+    sanitationMentioned, septicTank, facadeConcern, isDetached, isSemiDetached,
+    hasOutbuilding, missing,
+    rentDetected: Boolean(rentMatch),
+    chargesDetected: Boolean(chargesMatch),
+    propertyTaxDetected: Boolean(taxMatch),
+    dpeDetected: Boolean(dpeMatch),
+    worksDetected: hasWorks
   };
 }
 
-// Normalise les champs renvoyés par l'IA (types laxistes, valeurs nulles) vers
-// le même format que extractListingFields, pour que le moteur de calcul soit
-// identique quelle que soit la source des données.
 function normalizeAiFields(raw, fallbackText) {
   const local = extractListingFields(fallbackText);
+  const type = ["house", "apartment"].includes(raw?.propertyType) ? raw.propertyType : local.propertyType;
+  const bool = (key) => typeof raw?.[key] === "boolean" ? raw[key] : local[key];
+
   return {
-    price: Number(raw?.price) > 0 ? Number(raw.price) : local.price,
-    surface: Number(raw?.surface) > 0 ? Number(raw.surface) : local.surface,
-    estimatedRent: Number(raw?.estimatedRent) > 0 ? Number(raw.estimatedRent) : local.estimatedRent,
-    monthlyCharges: Number(raw?.monthlyCharges) >= 0 ? Number(raw.monthlyCharges) : local.monthlyCharges,
-    propertyTax: Number(raw?.propertyTax) >= 0 ? Number(raw.propertyTax) : local.propertyTax,
-    rooms: Number(raw?.rooms) > 0 ? Number(raw.rooms) : local.rooms,
-    city: typeof raw?.city === "string" && raw.city.trim() ? raw.city.trim() : local.city,
-    dpe: typeof raw?.dpe === "string" && /^[A-G]$/i.test(raw.dpe) ? raw.dpe.toUpperCase() : local.dpe,
-    hasWorks: typeof raw?.hasWorks === "boolean" ? raw.hasWorks : local.hasWorks,
-    isRenovated: typeof raw?.isRenovated === "boolean" ? raw.isRenovated : local.isRenovated,
-    hasElevator: typeof raw?.hasElevator === "boolean" ? raw.hasElevator : local.hasElevator,
-    hasParking: typeof raw?.hasParking === "boolean" ? raw.hasParking : local.hasParking,
-    hasBalcony: typeof raw?.hasBalcony === "boolean" ? raw.hasBalcony : local.hasBalcony,
-    rented: typeof raw?.rented === "boolean" ? raw.rented : local.rented,
+    propertyType: type,
+    price: local.price,
+    surface: local.surface,
+    landSurface: local.landSurface,
+    estimatedRent: local.estimatedRent,
+    monthlyCharges: local.monthlyCharges,
+    propertyTax: local.propertyTax,
+    rooms: local.rooms,
+    bedrooms: local.bedrooms,
+    city: local.city,
+    dpe: local.dpe,
+    hasWorks: bool("hasWorks"),
+    isRenovated: bool("isRenovated"),
+    hasElevator: bool("hasElevator"),
+    hasParking: bool("hasParking"),
+    hasOutdoor: bool("hasOutdoor"),
+    rented: bool("rented"),
+    hasCopro: bool("hasCopro"),
+    roofMentioned: bool("roofMentioned"),
+    roofConcern: bool("roofConcern"),
+    heatingMentioned: bool("heatingMentioned"),
+    sanitationMentioned: bool("sanitationMentioned"),
+    septicTank: bool("septicTank"),
+    facadeConcern: bool("facadeConcern"),
+    isDetached: bool("isDetached"),
+    isSemiDetached: bool("isSemiDetached"),
+    hasOutbuilding: bool("hasOutbuilding"),
+    missing: local.missing,
+    rentDetected: local.rentDetected,
+    chargesDetected: local.chargesDetected,
+    propertyTaxDetected: local.propertyTaxDetected,
+    dpeDetected: local.dpeDetected,
+    worksDetected: local.worksDetected
   };
 }
 
 function computeListingAnalysis(fields) {
-  const { price, surface, estimatedRent, monthlyCharges, propertyTax, rooms, city, dpe,
-    hasWorks, isRenovated, hasParking, hasBalcony, rented } = fields;
+  const {
+    propertyType, price, surface, landSurface, estimatedRent, monthlyCharges, propertyTax,
+    rooms, bedrooms, city, dpe, hasWorks, isRenovated, hasParking, hasOutdoor, rented,
+    hasCopro, roofMentioned, roofConcern, heatingMentioned, sanitationMentioned,
+    septicTank, facadeConcern, isDetached, isSemiDetached, hasOutbuilding, missing,
+    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected
+  } = fields;
 
-  const worksEstimate = hasWorks ? Math.round(surface * 650) : isRenovated ? 0 : Math.round(surface * 150);
-  const acquisitionCost = price * 1.08 + worksEstimate;
+  const isHouse = propertyType === "house";
+  const isApartment = propertyType === "apartment";
+  const usableFinancialData = price > 0 && surface > 0 && rentDetected && estimatedRent > 0;
+  const financialReady =
+    usableFinancialData &&
+    propertyTaxDetected &&
+    (isHouse || chargesDetected);
+
+  const heavyWorksPerM2 = isHouse ? 850 : 650;
+  let worksEstimate = null;
+  if (worksDetected && surface > 0) {
+    worksEstimate = Math.round(surface * heavyWorksPerM2);
+    if (isHouse && roofConcern) worksEstimate += Math.max(18000, Math.round(surface * 180));
+    if (isHouse && facadeConcern) worksEstimate += Math.max(8000, Math.round(surface * 80));
+    if (isHouse && septicTank) worksEstimate += 9000;
+  }
+
+  const acquisitionCost = price > 0 ? price * 1.08 + (worksEstimate || 0) : 0;
   const yearlyRent = estimatedRent * 12;
-  const yearlyCharges = monthlyCharges * 12 + propertyTax + yearlyRent * 0.05;
-  const grossYield = acquisitionCost ? yearlyRent / acquisitionCost * 100 : 0;
-  const netYield = acquisitionCost ? (yearlyRent - yearlyCharges) / acquisitionCost * 100 : 0;
+  const vacancyRate = isHouse ? 0.06 : 0.05;
+  const maintenanceRate = isHouse ? 0.06 : 0.035;
+  const yearlyCharges =
+    (chargesDetected ? monthlyCharges * 12 : 0) +
+    (propertyTaxDetected ? propertyTax : 0) +
+    yearlyRent * vacancyRate +
+    yearlyRent * maintenanceRate;
+
+  const grossYield = financialReady && acquisitionCost ? yearlyRent / acquisitionCost * 100 : null;
+  const netYield = financialReady && acquisitionCost ? (yearlyRent - yearlyCharges) / acquisitionCost * 100 : null;
 
   const contribution = acquisitionCost * 0.1;
-  const principal = acquisitionCost - contribution;
+  const principal = Math.max(0, acquisitionCost - contribution);
   const monthlyRate = 0.032 / 12;
   const months = 25 * 12;
-  const payment = principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
-  const cashflow = (yearlyRent - yearlyCharges) / 12 - payment;
+  const payment = principal > 0 ? principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months)) : 0;
+  const cashflow = financialReady ? (yearlyRent - yearlyCharges) / 12 - payment : null;
 
-  let score = 58;
-  score += clamp((grossYield - 5) * 7, -14, 20);
-  score += cashflow >= 0 ? 9 : clamp(cashflow / 25, -12, 0);
-  score += hasParking ? 4 : 0;
-  score += hasBalcony ? 3 : 0;
-  score += isRenovated ? 4 : 0;
-  score += rented ? 3 : 0;
-  score -= hasWorks ? 6 : 0;
-  score -= ["F", "G"].includes(dpe) ? 12 : dpe === "E" ? 5 : 0;
-  score = Math.round(clamp(score, 28, 94));
+  let score = financialReady ? 56 : null;
+  if (financialReady) {
+    score += clamp((grossYield - 5) * 7, -14, 20);
+    score += cashflow >= 0 ? 9 : clamp(cashflow / 25, -12, 0);
+  }
+  if (score !== null) {
+    score += hasParking ? 3 : 0;
+    score += hasOutdoor ? (isHouse ? 2 : 3) : 0;
+    score += isRenovated ? 4 : 0;
+    score += rented ? 3 : 0;
+    score += isHouse && isDetached ? 2 : 0;
+    score += isHouse && hasOutbuilding ? 2 : 0;
+    score -= hasWorks ? 6 : 0;
+    score -= roofConcern ? 7 : 0;
+    score -= facadeConcern ? 5 : 0;
+    score -= septicTank ? 2 : 0;
+    score -= dpeDetected && ["F", "G"].includes(dpe) ? 12 : dpeDetected && dpe === "E" ? 5 : 0;
+    score = Math.round(clamp(score, 20, 94));
+  }
 
   const negotiationRate =
-    hasWorks || ["E", "F", "G"].includes(dpe) ? 0.09 :
-    grossYield < 5 ? 0.07 :
+    roofConcern || facadeConcern || ["F", "G"].includes(dpe) ? 0.11 :
+    hasWorks || dpe === "E" ? 0.09 :
+    usableFinancialData && grossYield < 5 ? 0.07 :
     0.045;
-  const advisedPrice = Math.round(price * (1 - negotiationRate) / 1000) * 1000;
+  const advisedPrice = financialReady && price > 0
+    ? Math.round(price * (1 - negotiationRate) / 1000) * 1000
+    : null;
 
   const strengths = [
-    grossYield >= 7 ? "Rendement brut attractif" : grossYield >= 5.5 ? "Rendement cohérent pour le marché" : null,
-    hasParking ? "Stationnement ou garage mentionné" : null,
-    hasBalcony ? "Extérieur valorisant pour la location" : null,
+    financialReady && grossYield >= 7 ? "Rendement brut attractif" : financialReady && grossYield >= 5.5 ? "Rendement cohérent" : null,
+    hasParking ? (isHouse ? "Garage ou stationnement identifié" : "Stationnement identifié") : null,
+    hasOutdoor ? (isHouse ? "Terrain, jardin ou cour valorisant le bien" : "Extérieur valorisant pour la location") : null,
     isRenovated ? "Bien annoncé comme rénové" : null,
     rented ? "Revenus locatifs déjà en place" : null,
-    dpe === "A" || dpe === "B" || dpe === "C" ? `Performance énergétique favorable : DPE ${dpe}` : null
+    isHouse && isDetached ? "Maison individuelle sans mitoyenneté mentionnée" : null,
+    isHouse && hasOutbuilding ? "Dépendance ou espace annexe identifié" : null,
+    ["A", "B", "C"].includes(dpe) ? `Performance énergétique favorable : DPE ${dpe}` : null
   ].filter(Boolean);
 
   const weaknesses = [
-    cashflow < 0 ? `Effort d’épargne estimé à ${euro(Math.abs(cashflow))}/mois` : null,
-    hasWorks ? `Budget travaux probable d’environ ${euro(worksEstimate)}` : null,
+    !usableFinancialData ? "Données insuffisantes pour fiabiliser le rendement et le cash-flow" : null,
+    financialReady && cashflow < 0 ? `Effort d’épargne estimé à ${euro(Math.abs(cashflow))}/mois` : null,
+    worksDetected && worksEstimate ? `Travaux mentionnés : budget indicatif d’environ ${euro(worksEstimate)}` : null,
     ["F", "G"].includes(dpe) ? `DPE ${dpe} : risque réglementaire et travaux énergétiques` : null,
     dpe === "E" ? "DPE E : anticiper les futures contraintes énergétiques" : null,
-    !hasParking ? "Aucun stationnement identifié dans le texte" : null,
+    dpe === "NC" ? "DPE non détecté dans l’annonce" : null,
+    isHouse && !roofMentioned ? "État de la toiture et de la charpente à contrôler" : null,
+    isHouse && !heatingMentioned ? "Système et coût du chauffage à vérifier" : null,
+    isHouse && !sanitationMentioned ? "Assainissement ou raccordement au tout-à-l’égout à confirmer" : null,
+    isHouse && roofConcern ? "Travaux de toiture signalés ou suspectés" : null,
+    isHouse && facadeConcern ? "Façade, fissures ou humidité à expertiser" : null,
+    isApartment && !hasCopro ? "Charges, syndic et documents de copropriété non identifiés" : null,
     city === "Ville à confirmer" ? "Localisation insuffisamment précise pour juger le marché" : null
   ].filter(Boolean);
 
-  while (strengths.length < 3) strengths.push([
+  const houseFallbackStrengths = [
+    "Configuration familiale potentiellement adaptée à une location longue durée",
+    landSurface > 0 ? `Terrain détecté : ${landSurface} m²` : "Extérieurs et limites de parcelle à vérifier",
+    "Potentiel à confirmer avec les loyers de maisons comparables"
+  ];
+  const apartmentFallbackStrengths = [
     "Surface adaptée à une demande locative courante",
-    "Projet exploitable en location meublée",
-    "Structure financière facile à optimiser"
-  ][strengths.length]);
+    "Projet potentiellement exploitable en location meublée",
+    "Structure financière à préciser avec les données manquantes"
+  ];
 
-  while (weaknesses.length < 3) weaknesses.push([
+  while (strengths.length < 3) strengths.push((isHouse ? houseFallbackStrengths : apartmentFallbackStrengths)[strengths.length]);
+
+  const houseFallbackWeaknesses = [
+    "Taxe foncière et coût d’entretien extérieur à confirmer",
+    "Loyer d’une maison comparable à vérifier localement",
+    "Toiture, chauffage, humidité et assainissement à contrôler"
+  ];
+  const apartmentFallbackWeaknesses = [
     "Charges et taxe foncière à confirmer",
     "Loyer de marché à vérifier localement",
     "Procès-verbaux de copropriété à analyser"
-  ][weaknesses.length]);
+  ];
+  while (weaknesses.length < 3) weaknesses.push((isHouse ? houseFallbackWeaknesses : apartmentFallbackWeaknesses)[weaknesses.length]);
 
-  const verdict = score >= 80 ? "ACHETER" : score >= 62 ? "NÉGOCIER" : "ÉVITER";
-  const verdictTone = score >= 80 ? "buy" : score >= 62 ? "negotiate" : "avoid";
+  const factualCount = [
+    price > 0, surface > 0, rooms > 0, city !== "Ville à confirmer",
+    rentDetected, propertyTaxDetected, dpeDetected,
+    isHouse ? true : chargesDetected
+  ].filter(Boolean).length;
+  const confidence = financialReady && factualCount >= 7 ? "élevée" : factualCount >= 4 ? "moyenne" : "faible";
+  const verdict =
+    !financialReady ? "À COMPLÉTER" :
+    score >= 80 ? "ACHETER" :
+    score >= 62 ? "NÉGOCIER" :
+    "ÉVITER";
+  const verdictTone = !financialReady ? "incomplete" : score >= 80 ? "buy" : score >= 62 ? "negotiate" : "avoid";
 
   return {
-    price, surface, estimatedRent, monthlyCharges, propertyTax, rooms, city, dpe,
-    worksEstimate, grossYield, netYield, cashflow, score, advisedPrice,
-    strengths: strengths.slice(0, 4), weaknesses: weaknesses.slice(0, 4),
-    verdict, verdictTone
+    propertyType, propertyLabel: isHouse ? "Maison" : isApartment ? "Appartement" : "Bien immobilier",
+    price, surface, landSurface, estimatedRent, monthlyCharges, propertyTax, rooms, bedrooms,
+    city, dpe, worksEstimate, grossYield, netYield, cashflow, score, advisedPrice,
+    strengths: strengths.slice(0, 5), weaknesses: weaknesses.slice(0, 5),
+    verdict, verdictTone, confidence, missing, usableFinancialData, financialReady,
+    rentDetected, chargesDetected, propertyTaxDetected, dpeDetected, worksDetected,
+    hasParking, hasOutdoor, hasCopro, isRenovated
   };
 }
 
@@ -724,10 +865,15 @@ function AnnouncementAnalysis({ onExport }) {
   const [usedAI, setUsedAI] = useState(false);
   const [error, setError] = useState("");
 
-  const demoText = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
-Prix : 215 000 €. Charges : 105 € / mois. Taxe foncière : 890 €.
+  const apartmentDemo = `Appartement T2 de 48 m² à Bordeaux, proche tramway.
+Prix : 215 000 €. Charges de copropriété : 105 € / mois. Taxe foncière : 890 €.
 Appartement rénové, balcon, parking et ascenseur. DPE C.
 Loyer estimé : 1 050 € par mois.`;
+
+  const houseDemo = `Maison de ville T4 de 92 m² habitables à Chilly-Mazarin, 3 chambres.
+Prix : 285 000 €. Terrain de 180 m² avec cour et garage. Taxe foncière : 1 450 €.
+Chauffage au gaz, raccordée au tout-à-l’égout, toiture révisée. DPE D.
+Loyer estimé : 1 650 € par mois.`;
 
   const analyze = async () => {
     const cleanInput = input.trim();
@@ -778,12 +924,20 @@ Loyer estimé : 1 050 € par mois.`;
             <span className="eyebrow">
               <Sparkles size={13} /> {usedAI ? "ANALYSE IA" : "ANALYSE AUTOMATIQUE (MODE SECOURS)"}
             </span>
-            <h1>{result.city} · T{result.rooms} · {result.surface} m²</h1>
+            <h1>
+              {result.city} · {result.propertyLabel}
+              {result.rooms ? ` ${result.rooms} pièces` : ""}
+              {result.surface ? ` · ${result.surface} m²` : ""}
+            </h1>
             <p>
               {usedAI
-                ? "Analyse générée par IA à partir du texte de l’annonce, puis calculée selon nos règles financières."
-                : "L’IA était indisponible : analyse générée par notre moteur de règles local, à partir du texte de l’annonce."}
+                ? "Les données factuelles sont extraites du texte. Les estimations restent clairement séparées."
+                : "Analyse locale du texte : aucune donnée absente n’est remplacée par une valeur supposée."}
             </p>
+            <div className={`analysis-confidence confidence-${result.confidence}`}>
+              Niveau de complétude : {result.confidence}
+              {!result.financialReady && <span> · calcul financier suspendu</span>}
+            </div>
           </div>
           <div className="result-actions">
             <button className="secondary" onClick={reset}>Nouvelle analyse</button>
@@ -796,7 +950,9 @@ Loyer estimé : 1 050 € par mois.`;
             <span>VERDICT RENTA IA</span>
             <strong>{result.verdict}</strong>
             <p>
-              {result.verdict === "ACHETER"
+              {result.verdict === "À COMPLÉTER"
+                ? "Les charges, la taxe foncière ou le loyer manquent : aucun verdict financier fiable n’est affiché."
+                : result.verdict === "ACHETER"
                 ? "Le projet présente un équilibre financier particulièrement intéressant."
                 : result.verdict === "NÉGOCIER"
                 ? "Le projet est pertinent, mais le prix affiché doit être retravaillé."
@@ -804,37 +960,49 @@ Loyer estimé : 1 050 € par mois.`;
             </p>
           </div>
           <div className="ai-score-ring">
-            <strong>{result.score}</strong><small>/100</small>
+            <strong>{result.score ?? "—"}</strong>{result.score !== null && <small>/100</small>}
           </div>
         </section>
 
         <div className="analysis-metrics">
-          <Metric label="Prix affiché" value={euro(result.price)} note={`${euro(result.price / result.surface)}/m²`} icon={<Building2 />} />
-          <Metric label="Loyer estimé" value={euro(result.estimatedRent)} note="Estimation mensuelle" icon={<WalletCards />} tone="green" />
-          <Metric label="Rendement brut" value={pct(result.grossYield)} note={`Net estimé : ${pct(result.netYield)}`} icon={<TrendingUp />} tone="purple" />
-          <Metric label="Cash-flow estimé" value={euro(result.cashflow)} note="Financement 25 ans, apport 10 %" icon={<CircleDollarSign />} tone={result.cashflow >= 0 ? "green" : "red"} />
+          <Metric label="Prix affiché" value={result.price ? euro(result.price) : "Non renseigné"} note={result.price && result.surface ? `${euro(result.price / result.surface)}/m²` : "Donnée de l’annonce"} icon={<Building2 />} />
+          <Metric label="Loyer dans l’annonce" value={result.rentDetected ? euro(result.estimatedRent) : "Non renseigné"} note="Aucune estimation inventée" icon={<WalletCards />} tone="green" />
+          <Metric label="Rendement brut" value={result.financialReady ? pct(result.grossYield) : "Non calculable"} note={result.financialReady ? `Net : ${pct(result.netYield)}` : "Complétez les données manquantes"} icon={<TrendingUp />} tone="purple" />
+          <Metric label="Cash-flow" value={result.financialReady ? euro(result.cashflow) : "Non calculable"} note={result.financialReady ? "Financement 25 ans, apport 10 %" : "Calcul suspendu"} icon={<CircleDollarSign />} tone={result.financialReady && result.cashflow >= 0 ? "green" : "red"} />
         </div>
 
         <div className="analysis-layout">
           <section className="card negotiation-card">
-            <div className="section-title"><span><Target size={18} /> Prix de négociation conseillé</span></div>
-            <div className="price-comparison">
-              <div><span>Prix affiché</span><b>{euro(result.price)}</b></div>
-              <ChevronRight />
-              <div className="recommended-price"><span>Offre conseillée</span><b>{euro(result.advisedPrice)}</b></div>
-            </div>
-            <p>Économie potentielle : <strong>{euro(result.price - result.advisedPrice)}</strong></p>
+            <div className="section-title"><span><Target size={18} /> Prix de négociation</span></div>
+            {result.advisedPrice ? (
+              <>
+                <div className="price-comparison">
+                  <div><span>Prix affiché</span><b>{euro(result.price)}</b></div>
+                  <ChevronRight />
+                  <div className="recommended-price"><span>Offre indicative</span><b>{euro(result.advisedPrice)}</b></div>
+                </div>
+                <p>Écart indicatif : <strong>{euro(result.price - result.advisedPrice)}</strong></p>
+              </>
+            ) : (
+              <div className="analysis-unavailable">
+                <AlertTriangle size={18} />
+                <div><b>Impossible à déterminer sérieusement</b><span>Le loyer, les charges et la taxe foncière doivent être renseignés avant de proposer un prix.</span></div>
+              </div>
+            )}
           </section>
 
           <section className="card extracted-card">
-            <div className="section-title"><span><Search size={18} /> Données détectées</span></div>
-            <div className="extracted-grid">
-              <div><span>Surface</span><b>{result.surface} m²</b></div>
-              <div><span>Pièces</span><b>T{result.rooms}</b></div>
-              <div><span>DPE</span><b>{result.dpe}</b></div>
-              <div><span>Travaux</span><b>{euro(result.worksEstimate)}</b></div>
-              <div><span>Charges</span><b>{euro(result.monthlyCharges)}/mois</b></div>
-              <div><span>Taxe foncière</span><b>{euro(result.propertyTax)}</b></div>
+            <div className="section-title"><span><Search size={18} /> Données réellement détectées</span></div>
+            <div className="extracted-grid trusted-data-grid">
+              <div><span>Type</span><b>{result.propertyLabel}</b><small>Annonce</small></div>
+              <div><span>Surface habitable</span><b>{result.surface ? `${result.surface} m²` : "Non renseignée"}</b><small>{result.surface ? "Annonce" : "Manquante"}</small></div>
+              <div><span>Pièces</span><b>{result.rooms || "Non renseignées"}</b><small>{result.rooms ? "Annonce" : "Manquante"}</small></div>
+              {result.propertyType === "house" && <div><span>Terrain</span><b>{result.landSurface ? `${result.landSurface} m²` : "Non renseigné"}</b><small>{result.landSurface ? "Annonce" : "Manquante"}</small></div>}
+              <div><span>DPE</span><b>{result.dpeDetected ? result.dpe : "Non renseigné"}</b><small>{result.dpeDetected ? "Annonce" : "Manquante"}</small></div>
+              <div><span>Travaux</span><b>{result.worksDetected ? "Mentionnés" : "Aucun travail signalé"}</b><small>Lecture de l’annonce</small></div>
+              <div><span>{result.propertyType === "house" ? "Charges récurrentes" : "Charges de copropriété"}</span><b>{result.chargesDetected ? `${euro(result.monthlyCharges)}/mois` : "Non renseignées"}</b><small>{result.chargesDetected ? "Annonce" : "Manquante"}</small></div>
+              <div><span>Taxe foncière</span><b>{result.propertyTaxDetected ? euro(result.propertyTax) : "Non renseignée"}</b><small>{result.propertyTaxDetected ? "Annonce" : "Manquante"}</small></div>
+              <div><span>Loyer</span><b>{result.rentDetected ? `${euro(result.estimatedRent)}/mois` : "Non renseigné"}</b><small>{result.rentDetected ? "Annonce" : "Manquante"}</small></div>
             </div>
           </section>
         </div>
@@ -855,10 +1023,13 @@ Loyer estimé : 1 050 € par mois.`;
           <div>
             <span>CONSEIL RENTA IA</span>
             <p>
-              À {euro(result.price)}, le projet affiche un rendement brut estimé à {pct(result.grossYield)}.
-              Une offre proche de {euro(result.advisedPrice)} améliorerait la sécurité financière et le cash-flow.
-              Vérifiez impérativement le loyer de marché, les trois derniers procès-verbaux de copropriété,
-              le montant réel des charges et les éventuels travaux votés avant toute décision.
+              {result.financialReady
+                ? <>À {euro(result.price)}, le projet affiche un rendement brut calculé à {pct(result.grossYield)}.
+                    L’offre indicative de {euro(result.advisedPrice)} repose uniquement sur les données présentes. </>
+                : <>Le texte ne contient pas assez de données pour donner un rendement, un cash-flow ou un prix d’offre fiable. </>}
+              {result.propertyType === "house"
+                ? "Pour une maison, contrôlez en priorité la toiture, la charpente, le chauffage, l’humidité, l’assainissement, la taxe foncière et le loyer de maisons réellement comparables."
+                : "Pour un appartement, vérifiez le loyer de marché, les procès-verbaux de copropriété, les charges, les travaux votés et la taxe foncière."}
             </p>
           </div>
         </section>
@@ -908,15 +1079,14 @@ Loyer estimé : 1 050 € par mois.`;
         {error && <p className="announcement-error">{error}</p>}
 
         <div className="announcement-input-footer">
-          <button
-            className="secondary"
-            onClick={() => {
-              setInput(demoText);
-              setError("");
-            }}
-          >
-            Charger un exemple
-          </button>
+          <div className="demo-buttons">
+            <button className="secondary" onClick={() => { setInput(apartmentDemo); setError(""); }}>
+              Exemple appartement
+            </button>
+            <button className="secondary" onClick={() => { setInput(houseDemo); setError(""); }}>
+              Exemple maison
+            </button>
+          </div>
           <button
             className="primary analyze-button"
             onClick={analyze}
@@ -928,8 +1098,8 @@ Loyer estimé : 1 050 € par mois.`;
       </section>
 
       <div className="analysis-promises">
-        <div><Search /><b>Extraction automatique</b><span>Prix, surface, DPE, charges et loyer.</span></div>
-        <div><BarChart3 /><b>Analyse financière</b><span>Rendement, cash-flow et estimation des travaux.</span></div>
+        <div><Search /><b>Extraction automatique</b><span>Type de bien, prix, surface, terrain, DPE, charges et loyer.</span></div>
+        <div><BarChart3 /><b>Analyse financière</b><span>Calcul distinct pour appartement ou maison, avec entretien et travaux adaptés.</span></div>
         <div><Target /><b>Aide à la négociation</b><span>Score, verdict et prix d’offre conseillé.</span></div>
       </div>
 
@@ -1842,7 +2012,7 @@ export default function App() {
                 title="Analysez automatiquement une annonce"
                 description="Collez une annonce et obtenez immédiatement un score, une estimation financière, les risques détectés et un prix de négociation conseillé."
                 features={[
-                  "Extraction du prix, de la surface, des charges et du DPE",
+                  "Détection appartement ou maison, surface habitable, terrain, charges et DPE",
                   "Estimation du loyer, du rendement et du cash-flow",
                   "Score d’opportunité et verdict Acheter / Négocier / Éviter",
                   "Prix d’offre conseillé et rapport PDF"
