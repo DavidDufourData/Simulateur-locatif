@@ -1,9 +1,12 @@
-Remplacez votre App.jsx par le fichier fourni.
-Ajoutez le contenu de styles-a-ajouter.css à votre feuille CSS existante.
+VERSION V8 — DESIGN CONSERVÉ
 
-Correction effectuée :
-- suppression des onglets redondants « Texte » et « Lien + texte » ;
-- une seule zone de saisie honnête ;
-- détection d'une URL collée seule ;
-- blocage de l'analyse tant que le texte de l'annonce n'est pas fourni ;
-- aucune promesse de lecture automatique d'URL.
+1. Remplacez votre App.jsx actuel par App.jsx.
+2. Remplacez votre fichier styles.css actuel par styles.css.
+
+Cette fois, le CSS fourni est le fichier complet : il remplace l'ancien.
+Le design Premium d'origine est conservé.
+Seules les modifications suivantes ont été faites :
+- suppression de l'onglet redondant « Lien + texte » ;
+- ajout discret de « Analyse par URL bientôt disponible » ;
+- détection et blocage d'une URL collée seule ;
+- aucune nouvelle mise en page ni gros texte ajouté.

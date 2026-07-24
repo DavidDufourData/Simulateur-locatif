@@ -712,10 +712,8 @@ async function analyzeAnnouncement(text) {
   }
 }
 
-
-function isUrlOnly(value) {
-  const trimmed = String(value || "").trim();
-  return /^https?:\/\/\S+$/i.test(trimmed);
+function isStandaloneUrl(value) {
+  return /^https?:\/\/\S+$/i.test(String(value || "").trim());
 }
 
 function AnnouncementAnalysis({ onExport }) {
@@ -733,10 +731,8 @@ Loyer estimé : 1 050 € par mois.`;
   const analyze = async () => {
     const cleanInput = input.trim();
 
-    if (isUrlOnly(cleanInput)) {
-      setError(
-        "La lecture automatique d’un lien n’est pas encore disponible. Ouvrez l’annonce, copiez son texte puis collez-le ici."
-      );
+    if (isStandaloneUrl(cleanInput)) {
+      setError("La lecture automatique d’une URL arrive prochainement. Pour le moment, copiez puis collez le texte de l’annonce.");
       return;
     }
 
@@ -879,48 +875,26 @@ Loyer estimé : 1 050 € par mois.`;
       </section>
 
       <section className="card announcement-input-card">
-        <div className="section-title">
-          <span><FileText size={18} /> Texte de l’annonce</span>
-          <em>Compatible avec toutes les plateformes</em>
+        <div className="input-tabs">
+          <button className="active"><FileText size={15} /> Texte de l’annonce</button>
+          <span className="url-coming-soon">Analyse par URL bientôt disponible</span>
         </div>
-
-        <p className="announcement-input-help">
-          Ouvrez l’annonce immobilière, copiez sa description complète puis collez-la ci-dessous.
-          La lecture directe d’une URL n’est pas encore proposée.
-        </p>
-
         <textarea
           value={input}
           onChange={(event) => {
             setInput(event.target.value);
             if (error) setError("");
           }}
-          placeholder="Collez ici le texte complet : prix, surface, ville, charges, DPE, description, loyer éventuel…"
+          placeholder="Collez ici le texte complet de l’annonce : prix, surface, ville, charges, DPE, description, loyer éventuel…"
         />
-
-        {isUrlOnly(input) && (
-          <div className="url-not-supported" role="status">
-            <AlertTriangle size={16} />
-            <span>
-              Vous avez collé uniquement un lien. Copiez également le texte de l’annonce pour pouvoir l’analyser.
-            </span>
-          </div>
-        )}
-
         {error && <p className="announcement-error">{error}</p>}
-
         <div className="announcement-input-footer">
-          <button className="secondary" onClick={() => {
-            setInput(demoText);
-            setError("");
-          }}>
-            Charger un exemple
-          </button>
+          <button className="secondary" onClick={() => setInput(demoText)}>Charger un exemple</button>
           <button
             className="primary analyze-button"
             onClick={analyze}
-            disabled={isUrlOnly(input)}
-            title={isUrlOnly(input) ? "Collez le texte de l’annonce, pas seulement son lien." : ""}
+            disabled={isStandaloneUrl(input)}
+            title={isStandaloneUrl(input) ? "Copiez le texte de l’annonce pour lancer l’analyse." : ""}
           >
             <Sparkles size={17} /> Analyser cette annonce
           </button>
