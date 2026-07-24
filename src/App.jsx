@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart3, Building2, Calculator, Check, ChevronRight, CircleDollarSign,
   Crown, Download, Gauge, Home, LineChart, Moon, Plus, Save, Scale,
-  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, Link2, FileText, AlertTriangle, ThumbsUp, Search
+  Sparkles, Sun, Target, Trash2, TrendingUp, WalletCards, X, FileText, AlertTriangle, ThumbsUp, Search
 } from "lucide-react";
 
 const PREMIUM_STORAGE_KEY = "renta-v7-premium";
@@ -712,6 +712,12 @@ async function analyzeAnnouncement(text) {
   }
 }
 
+
+function isUrlOnly(value) {
+  const trimmed = String(value || "").trim();
+  return /^https?:\/\/\S+$/i.test(trimmed);
+}
+
 function AnnouncementAnalysis({ onExport }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle");
@@ -725,7 +731,16 @@ Appartement rénové, balcon, parking et ascenseur. DPE C.
 Loyer estimé : 1 050 € par mois.`;
 
   const analyze = async () => {
-    if (input.trim().length < 25) {
+    const cleanInput = input.trim();
+
+    if (isUrlOnly(cleanInput)) {
+      setError(
+        "La lecture automatique d’un lien n’est pas encore disponible. Ouvrez l’annonce, copiez son texte puis collez-le ici."
+      );
+      return;
+    }
+
+    if (cleanInput.length < 25) {
       setError("Collez le texte complet d’une annonce pour lancer l’analyse.");
       return;
     }
@@ -767,8 +782,8 @@ Loyer estimé : 1 050 € par mois.`;
             <h1>{result.city} · T{result.rooms} · {result.surface} m²</h1>
             <p>
               {usedAI
-                ? "L’IA a uniquement extrait les informations du texte. Les calculs, le score et le verdict proviennent ensuite de règles financières déterministes."
-                : "L’IA n’a pas été utilisée. L’analyse provient uniquement du moteur de règles local et certaines données peuvent être estimées."}
+                ? "Analyse générée par IA à partir du texte de l’annonce, puis calculée selon nos règles financières."
+                : "L’IA était indisponible : analyse générée par notre moteur de règles local, à partir du texte de l’annonce."}
             </p>
           </div>
           <div className="result-actions">
@@ -779,7 +794,7 @@ Loyer estimé : 1 050 € par mois.`;
 
         <section className={`ai-verdict ${result.verdictTone}`}>
           <div>
-            <span>{usedAI ? "VERDICT ASSISTÉ PAR IA" : "VERDICT AUTOMATIQUE"}</span>
+            <span>VERDICT RENTA IA</span>
             <strong>{result.verdict}</strong>
             <p>
               {result.verdict === "ACHETER"
@@ -839,7 +854,7 @@ Loyer estimé : 1 050 € par mois.`;
         <section className="card ai-advice-card">
           <div className="ai-advice-icon"><Sparkles size={22} /></div>
           <div>
-            <span>{usedAI ? "CONSEIL ASSISTÉ PAR IA" : "CONSEIL AUTOMATIQUE"}</span>
+            <span>CONSEIL RENTA IA</span>
             <p>
               À {euro(result.price)}, le projet affiche un rendement brut estimé à {pct(result.grossYield)}.
               Une offre proche de {euro(result.advisedPrice)} améliorerait la sécurité financière et le cash-flow.
@@ -858,25 +873,57 @@ Loyer estimé : 1 050 € par mois.`;
         <div>
           <span className="eyebrow"><Sparkles size={13} /> OUTIL PREMIUM</span>
           <h1>Analysez une annonce en quelques secondes.</h1>
-          <p>Collez le texte de l’annonce. Renta Locative extrait les données essentielles. Lorsque l’IA est disponible, elle aide à lire le texte ; les calculs financiers restent réalisés par notre moteur déterministe.</p>
+          <p>Collez le texte de l’annonce. Renta Locative identifie les données essentielles et génère une première analyse financière et stratégique.</p>
         </div>
         <div className="announcement-hero-icon"><FileText size={42} /></div>
       </section>
 
       <section className="card announcement-input-card">
-        <div className="input-tabs">
-          <button className="active"><FileText size={15} /> Texte de l’annonce</button>
-          <button title="Collez le contenu de la page, les liens seuls ne peuvent pas encore être lus automatiquement."><Link2 size={15} /> Lien + texte</button>
+        <div className="section-title">
+          <span><FileText size={18} /> Texte de l’annonce</span>
+          <em>Compatible avec toutes les plateformes</em>
         </div>
+
+        <p className="announcement-input-help">
+          Ouvrez l’annonce immobilière, copiez sa description complète puis collez-la ci-dessous.
+          La lecture directe d’une URL n’est pas encore proposée.
+        </p>
+
         <textarea
           value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Collez ici le texte complet de l’annonce : prix, surface, ville, charges, DPE, description, loyer éventuel…"
+          onChange={(event) => {
+            setInput(event.target.value);
+            if (error) setError("");
+          }}
+          placeholder="Collez ici le texte complet : prix, surface, ville, charges, DPE, description, loyer éventuel…"
         />
+
+        {isUrlOnly(input) && (
+          <div className="url-not-supported" role="status">
+            <AlertTriangle size={16} />
+            <span>
+              Vous avez collé uniquement un lien. Copiez également le texte de l’annonce pour pouvoir l’analyser.
+            </span>
+          </div>
+        )}
+
         {error && <p className="announcement-error">{error}</p>}
+
         <div className="announcement-input-footer">
-          <button className="secondary" onClick={() => setInput(demoText)}>Charger un exemple</button>
-          <button className="primary analyze-button" onClick={analyze}><Sparkles size={17} /> Analyser cette annonce</button>
+          <button className="secondary" onClick={() => {
+            setInput(demoText);
+            setError("");
+          }}>
+            Charger un exemple
+          </button>
+          <button
+            className="primary analyze-button"
+            onClick={analyze}
+            disabled={isUrlOnly(input)}
+            title={isUrlOnly(input) ? "Collez le texte de l’annonce, pas seulement son lien." : ""}
+          >
+            <Sparkles size={17} /> Analyser cette annonce
+          </button>
         </div>
       </section>
 
@@ -887,7 +934,8 @@ Loyer estimé : 1 050 € par mois.`;
       </div>
 
       <p className="analysis-disclaimer">
-        Cette analyse est indicative. Les données absentes peuvent être estimées par le moteur local et doivent être vérifiées. Elle ne remplace ni une étude de marché locale, ni un diagnostic technique, fiscal ou juridique.
+        Cette version réalise une analyse indicative à partir du texte collé. Elle ne remplace ni une étude de marché locale,
+        ni un diagnostic technique, fiscal ou juridique.
       </p>
     </div>
   );
